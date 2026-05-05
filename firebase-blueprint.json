@@ -1,0 +1,87 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and role association",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "permissions": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "Project tracking entity",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["planned", "active", "paused", "completed"] },
+        "progress": { "type": "number" },
+        "notes": { "type": "string" },
+        "links": { "type": "array", "items": { "type": "string" } },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "CodeSnippet": {
+      "title": "Code Snippet",
+      "description": "Stored code examples and notes",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "code": { "type": "string" },
+        "language": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "notes": { "type": "string" }
+      }
+    },
+    "Log": {
+      "title": "System Log",
+      "description": "Audit trail for system events",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "action": { "type": "string" },
+        "category": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "severity": { "type": "string", "enum": ["info", "warning", "error"] }
+      }
+    },
+    "StockWatchlist": {
+      "title": "Stock Watchlist",
+      "description": "User specific stock tracking",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "symbols": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Individual user accounts"
+    },
+    "/projects/{projectId}": {
+      "schema": "Project",
+      "description": "Shared or private projects"
+    },
+    "/snippets/{snippetId}": {
+      "schema": "CodeSnippet",
+      "description": "Shared or private code snippets"
+    },
+    "/logs/{logId}": {
+      "schema": "Log",
+      "description": "Global system logs"
+    },
+    "/watchlists/{userId}": {
+      "schema": "StockWatchlist",
+      "description": "User stock watchlists"
+    }
+  }
+}

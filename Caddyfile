@@ -1,0 +1,11 @@
+deine-domain.de {
+    reverse_proxy app:3000
+    
+    header {
+        # Sicherheitseinstellungen
+        Strict-Transport-Security "max-age=31536000;"
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy no-referrer-when-downgrade
+    }
+}

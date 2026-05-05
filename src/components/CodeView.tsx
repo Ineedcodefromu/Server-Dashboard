@@ -1,0 +1,148 @@
+import { useState, useEffect } from 'react';
+import { collection, query, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { handleFirestoreError, OperationType } from '../lib/firestoreErrorHandler';
+import { Code, Plus, Terminal, Hash, Copy, Check } from 'lucide-react';
+import { motion } from 'motion/react';
+
+interface Snippet {
+  id: string;
+  title: string;
+  code: string;
+  language: string;
+  tags: string[];
+}
+
+export function CodeView() {
+  const [snippets, setSnippets] = useState<Snippet[]>([]);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
+  const [newSnippet, setNewSnippet] = useState({ title: '', code: '', language: 'TypeScript', tags: '' });
+
+  useEffect(() => {
+    const q = query(collection(db, 'snippets'));
+    const path = 'snippets';
+    return onSnapshot(q, (snapshot) => {
+      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Snippet));
+      setSnippets(docs);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, path);
+    });
+  }, []);
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const path = 'snippets';
+    try {
+      await addDoc(collection(db, path), {
+        ...newSnippet,
+        tags: newSnippet.tags.split(',').map(t => t.trim()),
+        createdAt: serverTimestamp()
+      });
+      setNewSnippet({ title: '', code: '', language: 'TypeScript', tags: '' });
+      setIsAdding(false);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  };
+
+  const copyToClipboard = (code: string, id: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center bg-[#11111a]/60 backdrop-blur-xl p-6 rounded-3xl border border-white/5">
+        <div>
+          <h2 className="text-2xl font-bold text-white tracking-tight">Code Bibliothek</h2>
+          <p className="text-slate-500 text-sm">Speichere deine wichtigsten Algorithmen und Logik-Snippets.</p>
+        </div>
+        <button 
+          onClick={() => setIsAdding(true)}
+          className="bg-white text-black px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-slate-200 transition-all shadow-xl active:scale-95"
+        >
+          <Plus className="w-5 h-5" />
+          Snippet speichern
+        </button>
+      </div>
+
+      {isAdding && (
+        <form onSubmit={handleCreate} className="bg-[#11111a]/80 backdrop-blur-2xl p-8 rounded-3xl border border-white/10 shadow-2xl space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input 
+              type="text" 
+              placeholder="Snippet Titel"
+              required
+              value={newSnippet.title}
+              onChange={e => setNewSnippet({...newSnippet, title: e.target.value})}
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-blue-500/20" 
+            />
+            <input 
+              type="text" 
+              placeholder="Sprache (z.B. Python)"
+              value={newSnippet.language}
+              onChange={e => setNewSnippet({...newSnippet, language: e.target.value})}
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-blue-500/20" 
+            />
+          </div>
+          <textarea 
+            placeholder="Code hier einfügen..."
+            required
+            value={newSnippet.code}
+            onChange={e => setNewSnippet({...newSnippet, code: e.target.value})}
+            className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-blue-500/20 min-h-[150px] font-mono text-sm"
+          />
+          <input 
+            type="text" 
+            placeholder="Tags (kommagetrennt)"
+            value={newSnippet.tags}
+            onChange={e => setNewSnippet({...newSnippet, tags: e.target.value})}
+            className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-blue-500/20" 
+          />
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={() => setIsAdding(false)} className="px-6 py-3 text-slate-500 font-bold hover:text-white transition-colors">Abbrechen</button>
+            <button type="submit" className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors">Snippet erstellen</button>
+          </div>
+        </form>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {snippets.map((snippet) => (
+          <div key={snippet.id} className="bg-[#11111a]/60 rounded-3xl border border-white/5 overflow-hidden flex flex-col group hover:border-blue-500/20 transition-all">
+            <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/2">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/5 rounded-lg border border-white/5 group-hover:scale-110 transition-transform">
+                  <Terminal className="w-4 h-4 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white group-hover:text-blue-400 transition-colors">{snippet.title}</h3>
+                  <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest mt-0.5">{snippet.language}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => copyToClipboard(snippet.code, snippet.id)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs font-bold text-slate-400 hover:text-white hover:bg-white/10 transition-all active:scale-95"
+              >
+                {copiedId === snippet.id ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                {copiedId === snippet.id ? 'Kopiert' : 'Kopieren'}
+              </button>
+            </div>
+            <div className="p-6 bg-[#050508] text-slate-400 font-mono text-sm overflow-x-auto min-h-[120px] custom-scrollbar selection:bg-blue-500/30">
+              <pre><code className="block">{snippet.code}</code></pre>
+            </div>
+            <div className="p-4 bg-white/2 border-t border-white/5 flex gap-2 flex-wrap">
+              {snippet.tags.map(tag => (
+                <span key={tag} className="flex items-center gap-1 px-2.5 py-1 bg-white/5 rounded-lg text-[10px] font-bold text-slate-500 hover:text-blue-400 transition-colors cursor-default">
+                  <Hash className="w-3 h-3" />
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

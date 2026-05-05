@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-bg: #050508;
+  --color-card-bg: rgba(17, 17, 26, 0.6);
+  --color-border-subtle: rgba(255, 255, 255, 0.05);
+}
+
+@layer base {
+  body {
+    @apply bg-brand-bg text-slate-300 antialiased font-sans;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-card-bg backdrop-blur-xl border border-border-subtle rounded-2xl transition-all duration-300;
+  }
+  
+  .glow-blue {
+    @apply shadow-[0_0_15px_rgba(59,130,246,0.5)];
+  }
+}

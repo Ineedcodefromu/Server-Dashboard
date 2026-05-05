@@ -1,0 +1,88 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(role) {
+      return isSignedIn() && getUserData().role == role;
+    }
+
+    function isAdmin() {
+      return (isSignedIn() && request.auth.token.email == 'mathewsniko02@gmail.com' && isEmailVerified()) || hasRole('admin');
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function hasPermission(perm) {
+      return isAdmin() || (isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && perm in getUserData().permissions);
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Validation Helpers ---
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'role']) 
+        && data.uid == request.auth.uid 
+        && data.role in ['admin', 'user']
+        && (data.email == null || data.email is string);
+    }
+
+    function isValidProject(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() <= 200;
+    }
+
+    // --- Rules ---
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isSignedIn() && (
+        (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName'])) ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /projects/{projectId} {
+      allow read: if hasPermission('dashboard.view') || hasPermission('projects.view');
+      allow create, update: if hasPermission('projects.edit') && isValidProject(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /snippets/{snippetId} {
+      allow read: if hasPermission('dashboard.view') || hasPermission('code.view');
+      allow create, update: if hasPermission('code.edit');
+      allow delete: if isAdmin();
+    }
+
+    match /logs/{logId} {
+      allow read: if hasPermission('logs.view');
+      allow create: if isSignedIn(); // Any signed in user can trigger a log entry
+    }
+
+    match /watchlists/{userId} {
+      allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+    }
+  }
+}
