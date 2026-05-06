@@ -1,6 +1,11 @@
 {$VITE_APP_URL:localhost} {
     reverse_proxy app:3000
     
+    log {
+        output stdout
+        level DEBUG
+    }
+
     header {
         # Sicherheitseinstellungen
         Strict-Transport-Security "max-age=31536000;"
