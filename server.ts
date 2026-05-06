@@ -5,10 +5,34 @@ import axios from "axios";
 import Parser from "rss-parser";
 import dotenv from "dotenv";
 import si from "systeminformation";
+import YahooFinance from 'yahoo-finance2';
 
 dotenv.config();
 
+const yahooFinance = new YahooFinance();
 const parser = new Parser();
+
+// Simple cache for exchange rate
+let eurUsdRate = 0.92; // Default fallback
+let lastRateUpdate = 0;
+
+async function getExchangeRate() {
+  const now = Date.now();
+  if (now - lastRateUpdate < 3600000 && eurUsdRate !== 0.92) { // Cache for 1 hour
+    return eurUsdRate;
+  }
+
+  try {
+    const result = await yahooFinance.quote('EURUSD=X');
+    if (result && result.regularMarketPrice) {
+      eurUsdRate = 1 / result.regularMarketPrice; // We want USD -> EUR
+      lastRateUpdate = now;
+    }
+  } catch (error) {
+    console.error("Failed to fetch exchange rate, using fallback", error);
+  }
+  return eurUsdRate;
+}
 
 async function startServer() {
   const app = express();
@@ -59,25 +83,60 @@ async function startServer() {
     }
   });
 
-  // Mock Stock API (Replace with real API like Finnhub or Alpha Vantage in production)
+  // Real Stock API using Yahoo Finance
   app.get("/api/stocks", async (req, res) => {
-    const symbols = (req.query.symbols as string || "").split(",");
+    const symbolsRaw = req.query.symbols as string || "";
+    if (!symbolsRaw) return res.json([]);
     
-    // In a real app, you'd fetch from an external API here
-    // For this dashboard, we'll return some realistic-looking data
-    const mockData = symbols.map(symbol => {
-      const basePrice = symbol.charCodeAt(0) * 10;
-      const change = (Math.random() - 0.5) * 5;
-      return {
-        symbol: symbol.toUpperCase(),
-        price: (basePrice + change).toFixed(2),
-        change: change.toFixed(2),
-        changePercent: ((change / basePrice) * 100).toFixed(2),
-        updatedAt: new Date().toISOString()
-      };
-    });
+    const symbols = symbolsRaw.split(",").map(s => s.trim().toUpperCase());
+    const rate = await getExchangeRate();
 
-    res.json(mockData);
+    try {
+      const results = await Promise.all(
+        symbols.map(async (symbol) => {
+          try {
+            const quote = await yahooFinance.quote(symbol);
+            if (!quote) return null;
+
+            const originalPrice = quote.regularMarketPrice || 0;
+            const originalChange = quote.regularMarketChange || 0;
+            const currency = quote.currency || 'USD';
+
+            let priceEUR = originalPrice;
+            let changeEUR = originalChange;
+
+            if (currency === 'USD') {
+              priceEUR = originalPrice * rate;
+              changeEUR = originalChange * rate;
+            } else if (currency === 'EUR') {
+              // already EUR
+            }
+
+            return {
+              symbol: symbol,
+              name: quote.shortName || quote.longName || symbol,
+              price: originalPrice.toFixed(2),
+              change: originalChange.toFixed(2),
+              priceEUR: priceEUR.toFixed(2),
+              changeEUR: changeEUR.toFixed(2),
+              changePercent: (quote.regularMarketChangePercent || 0).toFixed(2),
+              currency: currency,
+              updatedAt: new Date().toISOString()
+            };
+          } catch (e) {
+            console.error(`Failed to fetch ${symbol}:`, e);
+            return null;
+          }
+        })
+      );
+
+      res.json({
+        stocks: results.filter(r => r !== null),
+        eurUsdRate: rate
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch stock data" });
+    }
   });
 
   // Vite middleware for development

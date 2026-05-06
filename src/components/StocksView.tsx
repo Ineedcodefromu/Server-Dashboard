@@ -8,12 +8,13 @@ export function StocksView() {
   const [loading, setLoading] = useState(true);
   const [watchlist, setWatchlist] = useState(['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'BTC']);
   const [newSymbol, setNewSymbol] = useState('');
+  const [currency, setCurrency] = useState<'EUR' | 'USD'>('EUR');
 
   const fetchStocks = async () => {
     setLoading(true);
     try {
       const data = await dashboardService.getStocks(watchlist);
-      setStocks(data);
+      setStocks(data.stocks);
     } catch (error) {
       console.error(error);
     } finally {
@@ -46,7 +47,21 @@ export function StocksView() {
           <h2 className="text-2xl font-bold text-slate-900">Aktienmarkt</h2>
           <p className="text-slate-500">Überwache deine Watchlist in Echtzeit.</p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-4 items-center">
+          <div className="flex bg-slate-100 p-1 rounded-xl">
+             <button 
+               onClick={() => setCurrency('EUR')}
+               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${currency === 'EUR' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+             >
+               EUR
+             </button>
+             <button 
+               onClick={() => setCurrency('USD')}
+               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${currency === 'USD' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+             >
+               USD
+             </button>
+          </div>
           <form onSubmit={handleAddSymbol} className="flex gap-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -87,17 +102,19 @@ export function StocksView() {
             </button>
             
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center font-bold text-slate-900 border border-slate-100">
-                {stock.symbol.slice(0, 2)}
+              <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center font-bold text-slate-900 border border-slate-100 overflow-hidden text-[10px]">
+                {stock.symbol}
               </div>
-              <div className="text-right">
-                <p className="text-sm font-bold text-slate-900 uppercase tracking-wider">{stock.symbol}</p>
-                <p className="text-xs text-slate-400 font-medium">Börsenwert</p>
+              <div className="text-right flex-1 ml-4 overflow-hidden">
+                <p className="text-sm font-bold text-slate-900 uppercase tracking-wider truncate">{(stock as any).name || stock.symbol}</p>
+                <p className="text-xs text-slate-400 font-medium">{stock.symbol}</p>
               </div>
             </div>
 
             <div className="flex items-baseline gap-2">
-              <p className="text-3xl font-black text-slate-900 tracking-tight">${stock.price}</p>
+              <p className="text-3xl font-black text-slate-900 tracking-tight">
+                {currency === 'EUR' ? `${stock.priceEUR}€` : `$${stock.price}`}
+              </p>
               <div className={`flex items-center gap-1 text-sm font-bold ${Number(stock.change) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {Number(stock.change) >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                 {stock.changePercent}%

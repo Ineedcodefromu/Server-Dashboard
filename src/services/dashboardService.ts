@@ -2,10 +2,19 @@ import axios from 'axios';
 
 export interface StockData {
   symbol: string;
+  name: string;
   price: string;
   change: string;
+  priceEUR: string;
+  changeEUR: string;
   changePercent: string;
+  currency: string;
   updatedAt: string;
+}
+
+export interface StocksResponse {
+  stocks: StockData[];
+  eurUsdRate: number;
 }
 
 export interface RSSFeed {
@@ -20,7 +29,7 @@ export interface RSSFeed {
 }
 
 export const dashboardService = {
-  getStocks: async (symbols: string[]): Promise<StockData[]> => {
+  getStocks: async (symbols: string[]): Promise<StocksResponse> => {
     const response = await axios.get(`/api/stocks?symbols=${symbols.join(',')}`);
     return response.data;
   },

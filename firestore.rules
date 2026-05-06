@@ -72,8 +72,7 @@ service cloud.firestore {
 
     match /snippets/{snippetId} {
       allow read: if hasPermission('dashboard.view') || hasPermission('code.view');
-      allow create, update: if hasPermission('code.edit');
-      allow delete: if isAdmin();
+      allow create, update, delete: if hasPermission('code.edit');
     }
 
     match /logs/{logId} {

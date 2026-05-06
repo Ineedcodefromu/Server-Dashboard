@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { collection, query, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { handleFirestoreError, OperationType } from '../lib/firestoreErrorHandler';
-import { Code, Plus, Terminal, Hash, Copy, Check } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Code, Plus, Terminal, Hash, Copy, Check, Pencil, Trash2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface Snippet {
   id: string;
@@ -17,7 +17,10 @@ export function CodeView() {
   const [snippets, setSnippets] = useState<Snippet[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [newSnippet, setNewSnippet] = useState({ title: '', code: '', language: 'TypeScript', tags: '' });
+  const [editSnippet, setEditSnippet] = useState({ title: '', code: '', language: '', tags: '' });
 
   useEffect(() => {
     const q = query(collection(db, 'snippets'));
@@ -36,7 +39,7 @@ export function CodeView() {
     try {
       await addDoc(collection(db, path), {
         ...newSnippet,
-        tags: newSnippet.tags.split(',').map(t => t.trim()),
+        tags: newSnippet.tags.split(',').map(t => t.trim()).filter(t => t !== ''),
         createdAt: serverTimestamp()
       });
       setNewSnippet({ title: '', code: '', language: 'TypeScript', tags: '' });
@@ -44,6 +47,45 @@ export function CodeView() {
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, path);
     }
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId) return;
+    const path = `snippets/${editingId}`;
+    try {
+      const snippetRef = doc(db, 'snippets', editingId);
+      await updateDoc(snippetRef, {
+        ...editSnippet,
+        tags: editSnippet.tags.split(',').map(t => t.trim()).filter(t => t !== ''),
+        updatedAt: serverTimestamp()
+      });
+      setEditingId(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, path);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deletingId) return;
+    const id = deletingId;
+    const path = `snippets/${id}`;
+    try {
+      await deleteDoc(doc(db, 'snippets', id));
+      setDeletingId(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  };
+
+  const startEditing = (snippet: Snippet) => {
+    setEditingId(snippet.id);
+    setEditSnippet({
+      title: snippet.title,
+      code: snippet.code,
+      language: snippet.language,
+      tags: snippet.tags.join(', ')
+    });
   };
 
   const copyToClipboard = (code: string, id: string) => {
@@ -60,7 +102,10 @@ export function CodeView() {
           <p className="text-slate-500 text-sm">Speichere deine wichtigsten Algorithmen und Logik-Snippets.</p>
         </div>
         <button 
-          onClick={() => setIsAdding(true)}
+          onClick={() => {
+            setIsAdding(true);
+            setEditingId(null);
+          }}
           className="bg-white text-black px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-slate-200 transition-all shadow-xl active:scale-95"
         >
           <Plus className="w-5 h-5" />
@@ -68,45 +113,109 @@ export function CodeView() {
         </button>
       </div>
 
-      {isAdding && (
-        <form onSubmit={handleCreate} className="bg-[#11111a]/80 backdrop-blur-2xl p-8 rounded-3xl border border-white/10 shadow-2xl space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input 
-              type="text" 
-              placeholder="Snippet Titel"
-              required
-              value={newSnippet.title}
-              onChange={e => setNewSnippet({...newSnippet, title: e.target.value})}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-blue-500/20" 
-            />
-            <input 
-              type="text" 
-              placeholder="Sprache (z.B. Python)"
-              value={newSnippet.language}
-              onChange={e => setNewSnippet({...newSnippet, language: e.target.value})}
-              className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-blue-500/20" 
-            />
-          </div>
-          <textarea 
-            placeholder="Code hier einfügen..."
-            required
-            value={newSnippet.code}
-            onChange={e => setNewSnippet({...newSnippet, code: e.target.value})}
-            className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-blue-500/20 min-h-[150px] font-mono text-sm"
-          />
-          <input 
-            type="text" 
-            placeholder="Tags (kommagetrennt)"
-            value={newSnippet.tags}
-            onChange={e => setNewSnippet({...newSnippet, tags: e.target.value})}
-            className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-blue-500/20" 
-          />
-          <div className="flex justify-end gap-3">
-            <button type="button" onClick={() => setIsAdding(false)} className="px-6 py-3 text-slate-500 font-bold hover:text-white transition-colors">Abbrechen</button>
-            <button type="submit" className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors">Snippet erstellen</button>
-          </div>
-        </form>
-      )}
+      <AnimatePresence>
+        {(isAdding || editingId) && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          >
+            <form 
+              onSubmit={editingId ? handleUpdate : handleCreate} 
+              className="bg-[#11111a] p-8 rounded-3xl border border-white/10 shadow-2xl space-y-4 w-full max-w-2xl relative"
+            >
+              <h3 className="text-xl font-bold text-white mb-4">
+                {editingId ? 'Snippet bearbeiten' : 'Neues Snippet'}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input 
+                  type="text" 
+                  placeholder="Snippet Titel"
+                  required
+                  value={editingId ? editSnippet.title : newSnippet.title}
+                  onChange={e => editingId ? setEditSnippet({...editSnippet, title: e.target.value}) : setNewSnippet({...newSnippet, title: e.target.value})}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-blue-500/20" 
+                />
+                <input 
+                  type="text" 
+                  placeholder="Sprache (z.B. Python)"
+                  value={editingId ? editSnippet.language : newSnippet.language}
+                  onChange={e => editingId ? setEditSnippet({...editSnippet, language: e.target.value}) : setNewSnippet({...newSnippet, language: e.target.value})}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-blue-500/20" 
+                />
+              </div>
+              <textarea 
+                placeholder="Code hier einfügen..."
+                required
+                value={editingId ? editSnippet.code : newSnippet.code}
+                onChange={e => editingId ? setEditSnippet({...editSnippet, code: e.target.value}) : setNewSnippet({...newSnippet, code: e.target.value})}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-blue-500/20 min-h-[200px] font-mono text-sm"
+              />
+              <input 
+                type="text" 
+                placeholder="Tags (kommagetrennt)"
+                value={editingId ? editSnippet.tags : newSnippet.tags}
+                onChange={e => editingId ? setEditSnippet({...editSnippet, tags: e.target.value}) : setNewSnippet({...newSnippet, tags: e.target.value})}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-blue-500/20" 
+              />
+              <div className="flex justify-end gap-3 pt-4">
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setIsAdding(false);
+                    setEditingId(null);
+                  }} 
+                  className="px-6 py-3 text-slate-500 font-bold hover:text-white transition-colors"
+                >
+                  Abbrechen
+                </button>
+                <button type="submit" className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20">
+                  {editingId ? 'Änderungen speichern' : 'Snippet erstellen'}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {deletingId && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#11111a] p-8 rounded-3xl border border-white/10 shadow-2xl max-w-sm w-full text-center"
+            >
+              <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center text-red-500 mx-auto mb-6">
+                <Trash2 className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Snippet löschen?</h3>
+              <p className="text-slate-500 text-sm mb-8">Dieser Vorgang kann nicht rückgängig gemacht werden.</p>
+              <div className="grid grid-cols-2 gap-4">
+                <button 
+                  onClick={() => setDeletingId(null)}
+                  className="px-6 py-3 bg-white/5 text-white rounded-xl font-bold hover:bg-white/10 transition-colors"
+                >
+                  Abbrechen
+                </button>
+                <button 
+                  onClick={handleDelete}
+                  className="px-6 py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-500/20"
+                >
+                  Löschen
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {snippets.map((snippet) => (
@@ -121,13 +230,29 @@ export function CodeView() {
                   <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest mt-0.5">{snippet.language}</p>
                 </div>
               </div>
-              <button 
-                onClick={() => copyToClipboard(snippet.code, snippet.id)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs font-bold text-slate-400 hover:text-white hover:bg-white/10 transition-all active:scale-95"
-              >
-                {copiedId === snippet.id ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                {copiedId === snippet.id ? 'Kopiert' : 'Kopieren'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => startEditing(snippet)}
+                  className="p-2 bg-white/5 border border-white/10 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all opacity-0 group-hover:opacity-100"
+                  title="Bearbeiten"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+                <button 
+                  onClick={() => setDeletingId(snippet.id)}
+                  className="p-2 bg-white/5 border border-white/10 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-400/10 transition-all opacity-0 group-hover:opacity-100"
+                  title="Löschen"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+                <button 
+                  onClick={() => copyToClipboard(snippet.code, snippet.id)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs font-bold text-slate-400 hover:text-white hover:bg-white/10 transition-all active:scale-95 ml-2"
+                >
+                  {copiedId === snippet.id ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                  {copiedId === snippet.id ? 'Kopiert' : 'Kopieren'}
+                </button>
+              </div>
             </div>
             <div className="p-6 bg-[#050508] text-slate-400 font-mono text-sm overflow-x-auto min-h-[120px] custom-scrollbar selection:bg-blue-500/30">
               <pre><code className="block">{snippet.code}</code></pre>

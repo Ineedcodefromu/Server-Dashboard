@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User as FirebaseUser, onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc, getDocFromServer } from 'firebase/firestore';
+import { doc, getDoc, setDoc, getDocFromServer, updateDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { handleFirestoreError, OperationType } from './firestoreErrorHandler';
 
@@ -30,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(user);
       if (user) {
         const userRef = doc(db, 'users', user.uid);
+        const isBootstrapAdmin = user.email === 'mathewsniko02@gmail.com';
         try {
           // Verify connection first to comply with instructions
           try {
@@ -44,15 +45,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const userDoc = await getDoc(userRef);
           
           if (userDoc.exists()) {
-            setProfile(userDoc.data() as UserProfile);
+            const data = userDoc.data() as UserProfile;
+            const defaultPerms = isBootstrapAdmin 
+              ? ['dashboard.view', 'projects.view', 'projects.edit', 'code.view', 'code.edit', 'logs.view'] 
+              : ['dashboard.view', 'code.view', 'code.edit'];
+            
+            const missingPerms = defaultPerms.filter(p => !data.permissions.includes(p));
+            
+            if (missingPerms.length > 0) {
+              const updatedPermissions = [...data.permissions, ...missingPerms];
+              await updateDoc(userRef, { permissions: updatedPermissions });
+              setProfile({ ...data, permissions: updatedPermissions });
+            } else {
+              setProfile(data);
+            }
           } else {
-            const isBootstrapAdmin = user.email === 'mathewsniko02@gmail.com';
             const newProfile: UserProfile = {
               uid: user.uid,
               email: user.email,
               displayName: user.displayName,
               role: isBootstrapAdmin ? 'admin' : 'user',
-              permissions: isBootstrapAdmin ? ['dashboard.view', 'projects.view', 'projects.edit', 'code.view', 'code.edit', 'logs.view'] : ['dashboard.view']
+              permissions: isBootstrapAdmin 
+                ? ['dashboard.view', 'projects.view', 'projects.edit', 'code.view', 'code.edit', 'logs.view'] 
+                : ['dashboard.view', 'code.view', 'code.edit']
             };
             try {
               await setDoc(userRef, newProfile);
