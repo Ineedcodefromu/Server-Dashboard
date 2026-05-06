@@ -3,6 +3,9 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import axios from "axios";
 import Parser from "rss-parser";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const parser = new Parser();
 
