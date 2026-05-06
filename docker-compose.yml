@@ -17,6 +17,8 @@ services:
   caddy:
     image: caddy:latest
     restart: always
+    environment:
+      - VITE_APP_URL=${VITE_APP_URL}
     ports:
       - "80:80"
       - "443:443"

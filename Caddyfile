@@ -1,4 +1,4 @@
-deine-domain.de {
+{$VITE_APP_URL:localhost} {
     reverse_proxy app:3000
     
     header {
