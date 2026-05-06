@@ -1,6 +1,6 @@
-{$VITE_APP_URL:localhost} {
+nikomathews.com {
     reverse_proxy app:3000
-    
+
     log {
         output stdout
         level DEBUG

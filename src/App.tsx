@@ -251,6 +251,8 @@ function LoginPage() {
 }
 
 function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (t: string) => void }) {
+  const { profile } = useAuth();
+  
   return (
     <div className="bg-[#050508] min-h-screen pl-20 relative overflow-hidden flex flex-col">
       {/* Decorative Orbs */}
@@ -271,13 +273,17 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
             <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
             <span className="text-[10px] uppercase font-bold text-green-400 tracking-wider">System Live</span>
           </div>
-          <div className="w-px h-6 bg-white/5" />
-          <div className="flex items-center gap-2">
-             <div className="text-[10px] text-right">
-                <p className="text-white font-bold leading-tight uppercase">Admin Console</p>
-                <p className="text-slate-600 leading-tight">v2.4.0-stable</p>
-             </div>
-          </div>
+          {profile?.role === 'admin' && (
+            <>
+              <div className="w-px h-6 bg-white/5" />
+              <div className="flex items-center gap-2">
+                <div className="text-[10px] text-right">
+                    <p className="text-white font-bold leading-tight uppercase">Admin Console</p>
+                    <p className="text-slate-600 leading-tight">v2.4.0-stable</p>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </header>
 
@@ -309,14 +315,6 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
           <span className="text-blue-500/60">Ready</span>
         </div>
         <div className="flex gap-6 items-center uppercase tracking-widest font-bold">
-          <div className="flex gap-2">
-            <span className="text-slate-700">CPU</span>
-            <span className="text-white">12%</span>
-          </div>
-          <div className="flex gap-2">
-            <span className="text-slate-700">Storage</span>
-            <span className="text-white">82%</span>
-          </div>
           <div className="flex gap-2 items-center text-emerald-500">
             <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
             <span>Encrypted Connection active</span>
