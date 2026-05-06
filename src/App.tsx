@@ -18,6 +18,7 @@ import { NewsView } from './components/NewsView';
 import { ProjectsView } from './components/ProjectsView';
 import { CodeView } from './components/CodeView';
 import { SettingsView } from './components/SettingsView';
+import { PerformanceView } from './components/PerformanceView';
 
 // --- Components ---
 
@@ -299,7 +300,7 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
             {activeTab === 'dashboard' && <DashboardOverview />}
             {activeTab === 'projects' && <ProjectsView />}
             {activeTab === 'code' && <CodeView />}
-            {activeTab === 'performance' && <SectionPlaceholder title="Leistungsdaten" description="Echtzeit-Statistiken über deine Systeme und Fortschritte." />}
+            {activeTab === 'performance' && <PerformanceView />}
             {activeTab === 'stocks' && <StocksView />}
             {activeTab === 'news' && <NewsView />}
             {activeTab === 'logs' && <SectionPlaceholder title="System Logs" description="Audit-Logs und Fehlermeldungen zur Überwachung deines Dashboards." />}

@@ -4,6 +4,7 @@ import path from "path";
 import axios from "axios";
 import Parser from "rss-parser";
 import dotenv from "dotenv";
+import si from "systeminformation";
 
 dotenv.config();
 
@@ -18,6 +19,31 @@ async function startServer() {
   // API Routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  // Real Performance Data
+  app.get("/api/performance", async (req, res) => {
+    try {
+      const [cpu, mem, fsSize] = await Promise.all([
+        si.currentLoad(),
+        si.mem(),
+        si.fsSize()
+      ]);
+
+      // Calculate totals for primary storage
+      const primaryFs = fsSize[0]; // Take first mount point as primary
+
+      res.json({
+        cpu: Math.round(cpu.currentLoad),
+        ram: Math.round((mem.active / mem.total) * 100),
+        storageUsed: primaryFs ? Math.round(primaryFs.use) : 0,
+        storageTotal: primaryFs ? Math.round(primaryFs.size / (1024 * 1024 * 1024)) : 0, // GB
+        storageUsedGB: primaryFs ? Math.round(primaryFs.used / (1024 * 1024 * 1024)) : 0, // GB
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to fetch system metrics" });
+    }
   });
 
   // RSS Proxy
