@@ -2,13 +2,25 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, RefreshCcw, Search, Plus, Trash2 } from 'lucide-react';
 import { dashboardService, StockData } from '../services/dashboardService';
 import { motion } from 'motion/react';
+import { useAuth } from '../lib/AuthContext';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { handleFirestoreError, OperationType } from '../lib/firestoreErrorHandler';
 
 export function StocksView() {
+  const { profile } = useAuth();
   const [stocks, setStocks] = useState<StockData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [watchlist, setWatchlist] = useState(['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'BTC']);
+  const [watchlist, setWatchlist] = useState<string[]>(['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'BTC']);
   const [newSymbol, setNewSymbol] = useState('');
   const [currency, setCurrency] = useState<'EUR' | 'USD'>('EUR');
+
+  // Load watchlist from profile on mount/profile change
+  useEffect(() => {
+    if (profile?.watchlist && profile.watchlist.length > 0) {
+      setWatchlist(profile.watchlist);
+    }
+  }, [profile?.watchlist]);
 
   const fetchStocks = async () => {
     setLoading(true);
@@ -28,16 +40,36 @@ export function StocksView() {
     return () => clearInterval(interval);
   }, [watchlist]);
 
-  const handleAddSymbol = (e: React.FormEvent) => {
+  const handleAddSymbol = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newSymbol && !watchlist.includes(newSymbol.toUpperCase())) {
-      setWatchlist([...watchlist, newSymbol.toUpperCase()]);
+      const updatedWatchlist = [...watchlist, newSymbol.toUpperCase()];
+      setWatchlist(updatedWatchlist);
       setNewSymbol('');
+
+      if (profile?.uid) {
+        try {
+          const userRef = doc(db, 'users', profile.uid);
+          await updateDoc(userRef, { watchlist: updatedWatchlist });
+        } catch (error) {
+          handleFirestoreError(error, OperationType.UPDATE, `users/${profile.uid}`);
+        }
+      }
     }
   };
 
-  const handleRemoveSymbol = (symbol: string) => {
-    setWatchlist(watchlist.filter(s => s !== symbol));
+  const handleRemoveSymbol = async (symbol: string) => {
+    const updatedWatchlist = watchlist.filter(s => s !== symbol);
+    setWatchlist(updatedWatchlist);
+
+    if (profile?.uid) {
+      try {
+        const userRef = doc(db, 'users', profile.uid);
+        await updateDoc(userRef, { watchlist: updatedWatchlist });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.UPDATE, `users/${profile.uid}`);
+      }
+    }
   };
 
   return (

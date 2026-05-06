@@ -10,6 +10,55 @@ import YahooFinance from 'yahoo-finance2';
 dotenv.config();
 
 const yahooFinance = new YahooFinance();
+
+// --- System Logging System ---
+interface SystemLog {
+  id: string;
+  type: 'info' | 'warning' | 'error' | 'success';
+  message: string;
+  source: string;
+  timestamp: string;
+  details?: string;
+}
+
+let systemLogs: SystemLog[] = [
+  {
+    id: 'initial',
+    type: 'success',
+    message: 'System Kern gestartet',
+    source: 'KERNEL',
+    timestamp: new Date().toISOString(),
+    details: 'Alle Subsysteme wurden erfolgreich initialisiert.'
+  }
+];
+
+function addLog(type: SystemLog['type'], message: string, source: string, details?: string) {
+  const newLog: SystemLog = {
+    id: Math.random().toString(36).substr(2, 9),
+    type,
+    message,
+    source,
+    timestamp: new Date().toISOString(),
+    details
+  };
+  systemLogs.unshift(newLog);
+  if (systemLogs.length > 200) systemLogs.pop();
+}
+
+// Log initial startup
+addLog('info', 'Express Server v4.0.0 Online', 'SERVER', `Port: 3000, Node: ${process.version}`);
+
+async function monitorSystem() {
+  try {
+    const load = await si.currentLoad();
+    if (load.currentLoad > 80) {
+      addLog('warning', 'Hohe CPU Last erkannt', 'MONITOR', `Aktuelle Last: ${Math.round(load.currentLoad)}%`);
+    }
+  } catch (e) {
+    console.error("Monitor failed", e);
+  }
+}
+setInterval(monitorSystem, 30000); // Check every 30s
 const parser = new Parser();
 
 // Simple cache for exchange rate
@@ -45,6 +94,11 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
+  // System Logs API
+  app.get("/api/system-logs", (req, res) => {
+    res.json(systemLogs);
+  });
+
   // Real Performance Data
   app.get("/api/performance", async (req, res) => {
     try {
@@ -74,6 +128,8 @@ async function startServer() {
   app.get("/api/rss", async (req, res) => {
     const url = req.query.url as string;
     if (!url) return res.status(400).json({ error: "URL is required" });
+    
+    addLog('info', `RSS Feed Request: ${url.substring(0, 30)}...`, 'NEWS_API');
 
     try {
       const feed = await parser.parseURL(url);
@@ -90,6 +146,7 @@ async function startServer() {
     
     const symbols = symbolsRaw.split(",").map(s => s.trim().toUpperCase());
     const rate = await getExchangeRate();
+    addLog('info', `Aktienkurse abgerufen für: ${symbols.join(', ')}`, 'STOCKS_API');
 
     try {
       const results = await Promise.all(

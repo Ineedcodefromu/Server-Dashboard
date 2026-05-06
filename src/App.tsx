@@ -19,6 +19,8 @@ import { ProjectsView } from './components/ProjectsView';
 import { CodeView } from './components/CodeView';
 import { SettingsView } from './components/SettingsView';
 import { PerformanceView } from './components/PerformanceView';
+import { LogsView } from './components/LogsView';
+import axios from 'axios';
 
 // --- Components ---
 
@@ -119,6 +121,20 @@ function StatCard({ label, value, icon: Icon, trend }: { label: string, value: s
 
 function DashboardOverview() {
   const { profile } = useAuth();
+  const [recentLogs, setRecentLogs] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const response = await axios.get('/api/system-logs');
+        setRecentLogs(response.data.slice(0, 5));
+      } catch (error) {
+        console.error('Dashboard logs fetch failed', error);
+      }
+    };
+    fetchLogs();
+  }, []);
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
       <div className="flex flex-col gap-1">
@@ -130,7 +146,7 @@ function DashboardOverview() {
         <StatCard label="Projekte" value="12" icon={Briefcase} trend="+2" />
         <StatCard label="Code Snippets" value="84" icon={Code} trend="+12" />
         <StatCard label="Markt" value="+4.2%" icon={TrendingUp} trend="+1.2%" />
-        <StatCard label="Aktivität" value="2.4k" icon={Terminal} />
+        <StatCard label="System Logs" value={recentLogs.length.toString()} icon={Terminal} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -173,23 +189,30 @@ function DashboardOverview() {
             </h3>
           </div>
           <div className="p-6 space-y-6">
-            {[
-              { title: 'Auth Hook Update', lang: 'TypeScript', time: '10:42:01', status: 'success' },
-              { title: 'Styles Refactor', lang: 'Tailwind', time: '09:15:33', status: 'info' },
-              { title: 'Deployment Success', lang: 'Docker', time: '08:00:10', status: 'success' },
-              { title: 'Database Sync', lang: 'Firestore', time: '04:12:55', status: 'info' },
-            ].map((n) => (
-              <div key={n.time} className="flex items-center justify-between group">
-                <div className="flex items-center gap-4">
-                  <div className="w-2 h-2 rounded-full bg-blue-500/40" />
-                  <div>
-                    <h4 className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">{n.title}</h4>
-                    <span className="text-[10px] text-slate-600 font-mono italic uppercase">{n.lang}</span>
+            {recentLogs.length > 0 ? (
+              recentLogs.map((n) => (
+                <div key={n.id} className="flex items-center justify-between group">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-2 h-2 rounded-full ${
+                      n.type === 'error' ? 'bg-red-500' : 
+                      n.type === 'warning' ? 'bg-amber-500' : 'bg-blue-500'
+                    }`} />
+                    <div>
+                      <h4 className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors line-clamp-1">{n.message}</h4>
+                      <span className="text-[10px] text-slate-600 font-mono italic uppercase">{n.source}</span>
+                    </div>
                   </div>
+                  <span className="text-[10px] font-mono text-slate-500 shrink-0 ml-4">
+                    {new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
                 </div>
-                <span className="text-[10px] font-mono text-slate-500">{n.time}</span>
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center h-48 text-slate-700">
+                <Terminal className="w-8 h-8 mb-2 opacity-20" />
+                <p className="text-[10px] uppercase font-black">Keine Aktivität</p>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>
@@ -303,7 +326,7 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
             {activeTab === 'performance' && <PerformanceView />}
             {activeTab === 'stocks' && <StocksView />}
             {activeTab === 'news' && <NewsView />}
-            {activeTab === 'logs' && <SectionPlaceholder title="System Logs" description="Audit-Logs und Fehlermeldungen zur Überwachung deines Dashboards." />}
+            {activeTab === 'logs' && <LogsView />}
             {activeTab === 'settings' && <SettingsView />}
           </motion.div>
         </AnimatePresence>

@@ -10,6 +10,8 @@ interface UserProfile {
   displayName: string | null;
   role: 'admin' | 'user';
   permissions: string[];
+  watchlist?: string[];
+  newsFeeds?: { name: string; url: string }[];
 }
 
 interface AuthContextType {
