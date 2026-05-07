@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User as FirebaseUser, onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc, getDocFromServer, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, getDocFromServer, updateDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { handleFirestoreError, OperationType } from './firestoreErrorHandler';
 
@@ -28,58 +28,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      if (user) {
-        const userRef = doc(db, 'users', user.uid);
-        const isBootstrapAdmin = user.email === 'mathewsniko02@gmail.com';
-        try {
-          // Verify connection first to comply with instructions
-          try {
-             await getDocFromServer(doc(db, 'test', 'connection'));
-          } catch (e) {
-             // Silence connection test errors unless they are critical, but instructions say to log them
-             if(e instanceof Error && e.message.includes('the client is offline')) {
-                console.error("Please check your Firebase configuration (offline).");
-             }
-          }
+    let unsubscribeProfile: (() => void) | null = null;
 
+    const unsubscribeAuth = onAuthStateChanged(auth, async (authUser) => {
+      setUser(authUser);
+      
+      if (unsubscribeProfile) {
+        unsubscribeProfile();
+        unsubscribeProfile = null;
+      }
+
+      if (authUser) {
+        const userRef = doc(db, 'users', authUser.uid);
+        
+        // Setup Real-time listener
+        unsubscribeProfile = onSnapshot(userRef, (snapshot) => {
+          if (snapshot.exists()) {
+            setProfile(snapshot.data() as UserProfile);
+          }
+        }, (error) => {
+          handleFirestoreError(error, OperationType.GET, `users/${authUser.uid}`);
+        });
+
+        // Initialize user if not exists
+        try {
           const userDoc = await getDoc(userRef);
+          const isBootstrapAdmin = authUser.email === 'mathewsniko02@gmail.com';
           
-          if (userDoc.exists()) {
-            const data = userDoc.data() as UserProfile;
-            const defaultPerms = isBootstrapAdmin 
-              ? ['dashboard.view', 'projects.view', 'projects.edit', 'code.view', 'code.edit', 'logs.view'] 
-              : ['dashboard.view', 'code.view', 'code.edit'];
-            
-            const missingPerms = defaultPerms.filter(p => !data.permissions.includes(p));
-            
-            if (missingPerms.length > 0) {
-              const updatedPermissions = [...data.permissions, ...missingPerms];
-              await updateDoc(userRef, { permissions: updatedPermissions });
-              setProfile({ ...data, permissions: updatedPermissions });
-            } else {
-              setProfile(data);
-            }
-          } else {
+          if (!userDoc.exists()) {
             const newProfile: UserProfile = {
-              uid: user.uid,
-              email: user.email,
-              displayName: user.displayName,
+              uid: authUser.uid,
+              email: authUser.email,
+              displayName: authUser.displayName,
               role: isBootstrapAdmin ? 'admin' : 'user',
               permissions: isBootstrapAdmin 
                 ? ['dashboard.view', 'projects.view', 'projects.edit', 'code.view', 'code.edit', 'logs.view'] 
                 : ['dashboard.view', 'code.view', 'code.edit']
             };
-            try {
-              await setDoc(userRef, newProfile);
-              setProfile(newProfile);
-            } catch (error) {
-              handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
-            }
+            await setDoc(userRef, newProfile);
           }
         } catch (error) {
-          handleFirestoreError(error, OperationType.GET, `users/${user.uid}`);
+          handleFirestoreError(error, OperationType.GET, `users/${authUser.uid}`);
         }
       } else {
         setProfile(null);
@@ -87,7 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeProfile) unsubscribeProfile();
+    };
   }, []);
 
   return (

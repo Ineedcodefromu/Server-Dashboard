@@ -5,11 +5,9 @@ import axios from "axios";
 import Parser from "rss-parser";
 import dotenv from "dotenv";
 import si from "systeminformation";
-import YahooFinance from 'yahoo-finance2';
+import yahooFinance from 'yahoo-finance2';
 
 dotenv.config();
-
-const yahooFinance = new YahooFinance();
 
 // --- System Logging System ---
 interface SystemLog {
@@ -72,7 +70,7 @@ async function getExchangeRate() {
   }
 
   try {
-    const result = await yahooFinance.quote('EURUSD=X');
+    const result: any = await yahooFinance.quote('EURUSD=X');
     if (result && result.regularMarketPrice) {
       eurUsdRate = 1 / result.regularMarketPrice; // We want USD -> EUR
       lastRateUpdate = now;
@@ -102,25 +100,29 @@ async function startServer() {
   // Real Performance Data
   app.get("/api/performance", async (req, res) => {
     try {
-      const [cpu, mem, fsSize] = await Promise.all([
-        si.currentLoad(),
-        si.mem(),
-        si.fsSize()
-      ]);
+      // Gather data with individual try/catches to prevent total failure
+      let cpu = { currentLoad: 0 };
+      let mem = { active: 0, total: 1 };
+      let fsSize: any[] = [];
+
+      try { cpu = await si.currentLoad(); } catch (e) { console.error("CPU info failed", e); }
+      try { mem = await si.mem(); } catch (e) { console.error("MEM info failed", e); }
+      try { fsSize = await si.fsSize(); } catch (e) { console.error("FS info failed", e); }
 
       // Calculate totals for primary storage
-      const primaryFs = fsSize[0]; // Take first mount point as primary
+      const primaryFs = fsSize && fsSize.length > 0 ? fsSize[0] : null;
 
       res.json({
-        cpu: Math.round(cpu.currentLoad),
-        ram: Math.round((mem.active / mem.total) * 100),
-        storageUsed: primaryFs ? Math.round(primaryFs.use) : 0,
-        storageTotal: primaryFs ? Math.round(primaryFs.size / (1024 * 1024 * 1024)) : 0, // GB
-        storageUsedGB: primaryFs ? Math.round(primaryFs.used / (1024 * 1024 * 1024)) : 0, // GB
+        cpu: Math.round(cpu.currentLoad || 0),
+        ram: Math.round((mem.active / (mem.total || 1)) * 100),
+        storageUsed: primaryFs ? Math.round(primaryFs.use || 0) : 0,
+        storageTotal: primaryFs ? Math.round((primaryFs.size || 0) / (1024 * 1024 * 1024)) : 0, // GB
+        storageUsedGB: primaryFs ? Math.round((primaryFs.used || 0) / (1024 * 1024 * 1024)) : 0, // GB
         timestamp: new Date().toISOString()
       });
     } catch (error: any) {
-      res.status(500).json({ error: "Failed to fetch system metrics" });
+      console.error("Metric Fetch Error:", error);
+      res.status(500).json({ error: "Failed to fetch system metrics", details: error.message });
     }
   });
 
@@ -132,10 +134,41 @@ async function startServer() {
     addLog('info', `RSS Feed Request: ${url.substring(0, 30)}...`, 'NEWS_API');
 
     try {
+      // Use a timeout and a better user agent for the parser
       const feed = await parser.parseURL(url);
       res.json(feed);
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error(`RSS Fetch Error for URL (${url}):`, error.message);
+      
+      let errorMessage = "Feed konnte nicht geladen werden";
+      let statusCode = error.response?.status || 500;
+
+      // rss-parser might throw errors with status code in message
+      if (error.message.includes('Status code')) {
+        const match = error.message.match(/Status code (\d+)/);
+        if (match) {
+          statusCode = parseInt(match[1]);
+        }
+      }
+
+      if (error.message.includes('ENOTFOUND')) {
+        errorMessage = "Server nicht gefunden (URL veraltet)";
+        statusCode = 404;
+      } else if (statusCode === 404 || error.message.includes('404')) {
+        errorMessage = "Der News-Feed wurde nicht gefunden (404 Not Found)";
+        statusCode = 404;
+      } else if (statusCode === 403) {
+        errorMessage = "Zugriff auf den Feed wurde verweigert (403 Forbidden)";
+      } else if (error.message.includes('Feed not recognized') || error.message.includes('Attribute without value')) {
+        errorMessage = "Kein gültiger RSS-Feed gefunden (Wahrscheinlich eine normale Webseite)";
+        statusCode = 400;
+      }
+
+      res.status(statusCode).json({ 
+        error: errorMessage, 
+        details: error.message,
+        url: url
+      });
     }
   });
 
@@ -152,7 +185,7 @@ async function startServer() {
       const results = await Promise.all(
         symbols.map(async (symbol) => {
           try {
-            const quote = await yahooFinance.quote(symbol);
+            const quote: any = await yahooFinance.quote(symbol);
             if (!quote) return null;
 
             const originalPrice = quote.regularMarketPrice || 0;
@@ -192,7 +225,8 @@ async function startServer() {
         eurUsdRate: rate
       });
     } catch (error: any) {
-      res.status(500).json({ error: "Failed to fetch stock data" });
+      console.error("Stocks Fetch Error:", error);
+      res.status(500).json({ error: "Failed to fetch stock data", details: error.message });
     }
   });
 
