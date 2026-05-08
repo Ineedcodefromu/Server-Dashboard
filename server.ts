@@ -5,7 +5,9 @@ import axios from "axios";
 import Parser from "rss-parser";
 import dotenv from "dotenv";
 import si from "systeminformation";
-import yahooFinance from 'yahoo-finance2';
+import YahooFinance from 'yahoo-finance2';
+
+const yahooFinance = new YahooFinance();
 
 dotenv.config();
 
@@ -189,7 +191,10 @@ async function startServer() {
             // yahoo-finance2's quote method is quite robust but sometimes fails for certain symbols
             const quote: any = await yahooFinance.quote(symbol);
 
-            if (!quote) return null;
+            if (!quote) {
+              addLog('warning', `Keine Daten für Symbol gefunden: ${symbol}`, 'STOCKS_API');
+              return null;
+            }
 
             const originalPrice = quote.regularMarketPrice || quote.postMarketPrice || 0;
             const originalChange = quote.regularMarketChange || 0;
@@ -202,9 +207,11 @@ async function startServer() {
               priceEUR = originalPrice * rate;
               changeEUR = originalChange * rate;
             } else if (currency !== 'EUR') {
-              // Simple heuristic: if it's not USD or EUR, we might need other rates
-              // but for now we only handle USD/EUR base
-              priceEUR = originalPrice * (currency === 'GBp' ? 0.012 : 1); // Pence to Euro roughly
+              // Handle other currencies roughly or just leave as is
+              // But for the most common (GBp for London stocks)
+              if (currency === 'GBp') {
+                priceEUR = (originalPrice / 100) * 1.2; // Pence to Euro roughly
+              }
             }
 
             return {
@@ -218,8 +225,9 @@ async function startServer() {
               currency: currency,
               updatedAt: new Date().toISOString()
             };
-          } catch (e) {
-            console.error(`Unexpected inner error for ${symbol}:`, e);
+          } catch (e: any) {
+            console.error(`Yahoo Finance error for ${symbol}:`, e.message);
+            addLog('error', `Fehler beim Abrufen von ${symbol}`, 'STOCKS_API', e.message);
             return null;
           }
         })
@@ -227,12 +235,17 @@ async function startServer() {
 
       const filteredResults = results.filter(r => r !== null);
       
+      if (filteredResults.length === 0 && symbols.length > 0) {
+        addLog('error', 'Alle Aktienanfragen fehlgeschlagen', 'STOCKS_API');
+      }
+
       res.json({
         stocks: filteredResults,
         eurUsdRate: rate
       });
     } catch (error: any) {
       console.error("Stocks Fetch Root Error:", error);
+      addLog('error', 'Kritischer Fehler in Stocks API', 'STOCKS_API', error.message);
       res.status(500).json({ error: "Failed to fetch stock data", details: error.message });
     }
   });

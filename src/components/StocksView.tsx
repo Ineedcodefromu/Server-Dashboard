@@ -31,7 +31,8 @@ export function StocksView() {
       setStocks(data.stocks);
     } catch (err: any) {
       console.error(err);
-      setError("Kursdaten konnten nicht geladen werden. Bitte überprüfe die Symbole.");
+      const detail = err.response?.data?.details || err.response?.data?.error || err.message;
+      setError(`Kursdaten-Fehler: ${detail}`);
     } finally {
       setLoading(false);
     }
@@ -123,7 +124,13 @@ export function StocksView() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {error ? (
+        {loading && stocks.length === 0 ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="bg-white p-6 rounded-3xl border border-slate-200 animate-pulse h-48 flex items-center justify-center">
+              <RefreshCcw className="w-8 h-8 text-slate-100 animate-spin" />
+            </div>
+          ))
+        ) : error ? (
           <div className="col-span-full py-12 text-center bg-white rounded-3xl border border-dashed border-slate-300">
              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <TrendingDown className="w-8 h-8 text-red-500" />
