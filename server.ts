@@ -175,20 +175,23 @@ async function startServer() {
   // Real Stock API using Yahoo Finance
   app.get("/api/stocks", async (req, res) => {
     const symbolsRaw = req.query.symbols as string || "";
-    if (!symbolsRaw) return res.json([]);
+    if (!symbolsRaw) return res.json({ stocks: [], eurUsdRate: await getExchangeRate() });
     
-    const symbols = symbolsRaw.split(",").map(s => s.trim().toUpperCase());
+    const symbols = symbolsRaw.split(",").filter(s => s.trim() !== "").map(s => s.trim().toUpperCase());
     const rate = await getExchangeRate();
     addLog('info', `Aktienkurse abgerufen für: ${symbols.join(', ')}`, 'STOCKS_API');
 
     try {
+      // Fetch all quotes in one batch call if possible, or handle individually with better error catching
       const results = await Promise.all(
         symbols.map(async (symbol) => {
           try {
+            // yahoo-finance2's quote method is quite robust but sometimes fails for certain symbols
             const quote: any = await yahooFinance.quote(symbol);
+
             if (!quote) return null;
 
-            const originalPrice = quote.regularMarketPrice || 0;
+            const originalPrice = quote.regularMarketPrice || quote.postMarketPrice || 0;
             const originalChange = quote.regularMarketChange || 0;
             const currency = quote.currency || 'USD';
 
@@ -198,8 +201,10 @@ async function startServer() {
             if (currency === 'USD') {
               priceEUR = originalPrice * rate;
               changeEUR = originalChange * rate;
-            } else if (currency === 'EUR') {
-              // already EUR
+            } else if (currency !== 'EUR') {
+              // Simple heuristic: if it's not USD or EUR, we might need other rates
+              // but for now we only handle USD/EUR base
+              priceEUR = originalPrice * (currency === 'GBp' ? 0.012 : 1); // Pence to Euro roughly
             }
 
             return {
@@ -214,18 +219,20 @@ async function startServer() {
               updatedAt: new Date().toISOString()
             };
           } catch (e) {
-            console.error(`Failed to fetch ${symbol}:`, e);
+            console.error(`Unexpected inner error for ${symbol}:`, e);
             return null;
           }
         })
       );
 
+      const filteredResults = results.filter(r => r !== null);
+      
       res.json({
-        stocks: results.filter(r => r !== null),
+        stocks: filteredResults,
         eurUsdRate: rate
       });
     } catch (error: any) {
-      console.error("Stocks Fetch Error:", error);
+      console.error("Stocks Fetch Root Error:", error);
       res.status(500).json({ error: "Failed to fetch stock data", details: error.message });
     }
   });

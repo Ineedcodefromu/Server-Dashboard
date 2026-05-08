@@ -11,7 +11,8 @@ export function StocksView() {
   const { profile } = useAuth();
   const [stocks, setStocks] = useState<StockData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [watchlist, setWatchlist] = useState<string[]>(['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'BTC']);
+  const [error, setError] = useState<string | null>(null);
+  const [watchlist, setWatchlist] = useState<string[]>(['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'BTC-USD']);
   const [newSymbol, setNewSymbol] = useState('');
   const [currency, setCurrency] = useState<'EUR' | 'USD'>('EUR');
 
@@ -24,11 +25,13 @@ export function StocksView() {
 
   const fetchStocks = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await dashboardService.getStocks(watchlist);
       setStocks(data.stocks);
-    } catch (error) {
-      console.error(error);
+    } catch (err: any) {
+      console.error(err);
+      setError("Kursdaten konnten nicht geladen werden. Bitte überprüfe die Symbole.");
     } finally {
       setLoading(false);
     }
@@ -120,50 +123,69 @@ export function StocksView() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {stocks.map((stock) => (
-          <motion.div 
-            layout
-            key={stock.symbol}
-            className="bg-white p-6 rounded-3xl border border-slate-200 relative group"
-          >
-            <button 
-              onClick={() => handleRemoveSymbol(stock.symbol)}
-              className="absolute top-4 right-4 p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+        {error ? (
+          <div className="col-span-full py-12 text-center bg-white rounded-3xl border border-dashed border-slate-300">
+             <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <TrendingDown className="w-8 h-8 text-red-500" />
+             </div>
+             <p className="text-slate-600 font-medium">{error}</p>
+             <button 
+               onClick={fetchStocks}
+               className="mt-4 px-6 py-2 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors"
+             >
+               Erneut versuchen
+             </button>
+          </div>
+        ) : stocks.length === 0 && !loading ? (
+          <div className="col-span-full py-12 text-center bg-white rounded-3xl border border-dashed border-slate-300">
+            <p className="text-slate-500">Keine Aktien in der Watchlist.</p>
+          </div>
+        ) : (
+          stocks.map((stock) => (
+            <motion.div 
+              layout
+              key={stock.symbol}
+              className="bg-white p-6 rounded-3xl border border-slate-200 relative group"
             >
-              <Trash2 className="w-4 h-4" />
-            </button>
-            
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center font-bold text-slate-900 border border-slate-100 overflow-hidden text-[10px]">
-                {stock.symbol}
+              <button 
+                onClick={() => handleRemoveSymbol(stock.symbol)}
+                className="absolute top-4 right-4 p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+              
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center font-bold text-slate-900 border border-slate-100 overflow-hidden text-[10px]">
+                  {stock.symbol}
+                </div>
+                <div className="text-right flex-1 ml-4 overflow-hidden">
+                  <p className="text-sm font-bold text-slate-900 uppercase tracking-wider truncate">{(stock as any).name || stock.symbol}</p>
+                  <p className="text-xs text-slate-400 font-medium">{stock.symbol}</p>
+                </div>
               </div>
-              <div className="text-right flex-1 ml-4 overflow-hidden">
-                <p className="text-sm font-bold text-slate-900 uppercase tracking-wider truncate">{(stock as any).name || stock.symbol}</p>
-                <p className="text-xs text-slate-400 font-medium">{stock.symbol}</p>
-              </div>
-            </div>
 
-            <div className="flex items-baseline gap-2">
-              <p className="text-3xl font-black text-slate-900 tracking-tight">
-                {currency === 'EUR' ? `${stock.priceEUR}€` : `$${stock.price}`}
-              </p>
-              <div className={`flex items-center gap-1 text-sm font-bold ${Number(stock.change) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {Number(stock.change) >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                {stock.changePercent}%
+              <div className="flex items-baseline gap-2">
+                <p className="text-3xl font-black text-slate-900 tracking-tight">
+                  {currency === 'EUR' ? `${stock.priceEUR}€` : `$${stock.price}`}
+                </p>
+                <div className={`flex items-center gap-1 text-sm font-bold ${Number(stock.change) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {Number(stock.change) >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                  {stock.changePercent}%
+                </div>
               </div>
-            </div>
 
-            <div className="mt-6 h-1 w-full bg-slate-50 rounded-full overflow-hidden">
-               <motion.div 
-                 initial={{ width: 0 }}
-                 animate={{ width: '100%' }}
-                 transition={{ duration: 1 }}
-                 className={`h-full ${Number(stock.change) >= 0 ? 'bg-green-500' : 'bg-red-500'} opacity-20`}
-               />
-            </div>
-            <p className="text-[10px] text-slate-400 mt-2 font-medium">Zuletzt aktualisiert: {new Date(stock.updatedAt).toLocaleTimeString()}</p>
-          </motion.div>
-        ))}
+              <div className="mt-6 h-1 w-full bg-slate-50 rounded-full overflow-hidden">
+                 <motion.div 
+                   initial={{ width: 0 }}
+                   animate={{ width: '100%' }}
+                   transition={{ duration: 1 }}
+                   className={`h-full ${Number(stock.change) >= 0 ? 'bg-green-500' : 'bg-red-500'} opacity-20`}
+                 />
+              </div>
+              <p className="text-[10px] text-slate-400 mt-2 font-medium">Zuletzt aktualisiert: {new Date(stock.updatedAt).toLocaleTimeString()}</p>
+            </motion.div>
+          ))
+        )}
       </div>
     </div>
   );
