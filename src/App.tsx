@@ -3,12 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ReactNode, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   BarChart3, Code, FileText, Settings, LayoutDashboard, 
   TrendingUp, Newspaper, Briefcase, LogOut, Menu, X, 
-  Terminal, User as UserIcon, Shield
+  Terminal, User as UserIcon, Shield, ShieldAlert, ChevronRight
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import { auth } from './lib/firebase';
@@ -24,8 +25,144 @@ import axios from 'axios';
 
 // --- Components ---
 
+function ProfileMenu() {
+  const { profile, effectiveRole, setImpersonatedRole } = useAuth();
+  const [isOpen, setIsOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [coords, setCoords] = useState({ left: 0, bottom: 0 });
+
+  if (!profile) return null;
+
+  const updateCoords = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setCoords({
+        left: rect.right + 12,
+        bottom: window.innerHeight - rect.bottom
+      });
+    }
+  };
+
+  const toggleMenu = () => {
+    updateCoords();
+    setIsOpen(!isOpen);
+  };
+
+  const roles: ('owner' | 'admin' | 'user')[] = profile.role === 'owner' 
+    ? ['owner', 'admin', 'user'] 
+    : ['admin', 'user'];
+
+  const isEmulating = effectiveRole !== profile.role;
+
+  return (
+    <div className="relative">
+      <button 
+        ref={buttonRef}
+        onClick={toggleMenu}
+        className={`w-10 h-10 rounded-full border p-0.5 shrink-0 transition-all duration-300 relative group overflow-visible ${
+          isEmulating 
+            ? 'border-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)]' 
+            : 'border-white/10 hover:border-blue-500/50'
+        }`}
+      >
+        <img 
+          src={`https://ui-avatars.com/api/?name=${encodeURIComponent(profile.displayName || 'User')}&background=020617&color=fff`} 
+          alt="Avatar" 
+          className="w-full h-full rounded-full bg-slate-700 object-cover" 
+        />
+        {isEmulating && (
+          <div className="absolute -top-1 -right-1 w-3 h-3 bg-amber-500 rounded-full border-2 border-[#11111a] z-10" />
+        )}
+      </button>
+
+      {isOpen && createPortal(
+        <>
+          <div className="fixed inset-0 z-[100]" onClick={() => setIsOpen(false)} />
+          <motion.div 
+            initial={{ opacity: 0, x: -10, scale: 0.95 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -10, scale: 0.95 }}
+            style={{ 
+              position: 'fixed',
+              left: coords.left,
+              bottom: coords.bottom,
+              zIndex: 101
+            }}
+            className="w-64 bg-[#0a0a0f] border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden backdrop-blur-2xl"
+          >
+            <div className="p-4 border-b border-white/5 bg-white/2">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                  <UserIcon className="w-5 h-5 text-blue-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-white truncate">{profile.displayName}</p>
+                  <p className="text-[10px] text-slate-500 truncate">{profile.email}</p>
+                </div>
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${
+                  profile.role === 'owner' ? 'bg-purple-500/20 text-purple-400' :
+                  profile.role === 'admin' ? 'bg-red-500/20 text-red-400' :
+                  'bg-blue-500/20 text-blue-400'
+                }`}>
+                  {profile.role}
+                </span>
+                {isEmulating && (
+                  <span className="text-[10px] text-amber-500 font-bold uppercase tracking-tighter animate-pulse">
+                    • Emulating {effectiveRole}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {(profile.role === 'owner' || profile.role === 'admin') && (
+              <div className="p-3 bg-white/1 border-b border-white/5">
+                <p className="text-[8px] uppercase font-black text-slate-500 tracking-[0.2em] mb-2 px-2">Role Emulation</p>
+                <div className="grid grid-cols-1 gap-1">
+                  {roles.map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => {
+                        setImpersonatedRole(r === profile.role ? null : r);
+                        setIsOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center justify-between ${
+                        effectiveRole === r 
+                          ? 'bg-blue-500/20 text-blue-400' 
+                          : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                      }`}
+                    >
+                      {r}
+                      {effectiveRole === r && <div className="w-1 h-1 bg-current rounded-full" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="p-2">
+              <button 
+                onClick={() => {
+                  signOut(auth);
+                  setIsOpen(false);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 text-slate-400 hover:text-red-400 hover:bg-red-500/5 rounded-xl transition-all group"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="text-[10px] font-bold uppercase tracking-widest">Sign Out</span>
+              </button>
+            </div>
+          </motion.div>
+        </>,
+        document.body
+      )}
+    </div>
+  );
+}
+
 function Sidebar({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (t: string) => void }) {
-  const { profile } = useAuth();
+  const { profile, effectiveRole } = useAuth();
   
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -39,13 +176,14 @@ function Sidebar({ activeTab, setActiveTab }: { activeTab: string, setActiveTab:
   ];
 
   const filteredItems = menuItems.filter(item => {
-    if (item.adminOnly && profile?.role !== 'admin') return false;
-    if (item.permission && !profile?.permissions.includes(item.permission) && profile?.role !== 'admin') return false;
+    const isPowerful = effectiveRole === 'admin' || effectiveRole === 'owner';
+    if (item.adminOnly && !isPowerful) return false;
+    if (item.permission && !profile?.permissions.includes(item.permission) && !isPowerful) return false;
     return true;
   });
 
   return (
-    <div className="fixed left-0 top-0 h-screen w-20 bg-[#0a0a0f]/40 backdrop-blur-md border-r border-white/5 flex flex-col items-center py-8 z-20 overflow-y-auto">
+    <div className="fixed left-0 top-0 h-screen w-20 bg-[#0a0a0f]/40 backdrop-blur-md border-r border-white/5 flex flex-col items-center py-8 z-20 overflow-y-auto no-scrollbar">
       <div className="mb-10">
         <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg glow-blue flex items-center justify-center">
           <Shield className="w-6 h-6 text-white" />
@@ -76,20 +214,7 @@ function Sidebar({ activeTab, setActiveTab }: { activeTab: string, setActiveTab:
       </nav>
 
       <div className="mt-auto flex flex-col items-center gap-6">
-        <div className="w-10 h-10 rounded-full border border-white/10 p-0.5 bg-slate-800 shrink-0">
-          <img 
-            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.displayName || 'User')}&background=020617&color=fff`} 
-            alt="Avatar" 
-            className="w-full h-full rounded-full bg-slate-700" 
-          />
-        </div>
-        <button 
-          onClick={() => signOut(auth)}
-          className="p-3 text-slate-600 hover:text-red-400 transition-colors"
-          title="Abmelden"
-        >
-          <LogOut className="w-5 h-5" />
-        </button>
+        <ProfileMenu />
       </div>
     </div>
   );
@@ -275,7 +400,7 @@ function LoginPage() {
 }
 
 function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (t: string) => void }) {
-  const { profile } = useAuth();
+  const { profile, effectiveRole } = useAuth();
   
   return (
     <div className="bg-[#050508] min-h-screen pl-20 relative overflow-hidden flex flex-col">
@@ -297,12 +422,15 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
             <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
             <span className="text-[10px] uppercase font-bold text-green-400 tracking-wider">System Live</span>
           </div>
-          {profile?.role === 'admin' && (
+
+          {(effectiveRole === 'admin' || effectiveRole === 'owner') && (
             <>
               <div className="w-px h-6 bg-white/5" />
               <div className="flex items-center gap-2">
                 <div className="text-[10px] text-right">
-                    <p className="text-white font-bold leading-tight uppercase">Admin Console</p>
+                    <p className="text-white font-bold leading-tight uppercase">
+                      {effectiveRole === 'owner' ? 'Owner Console' : 'Admin Console'}
+                    </p>
                     <p className="text-slate-600 leading-tight">v2.4.0-stable</p>
                 </div>
               </div>

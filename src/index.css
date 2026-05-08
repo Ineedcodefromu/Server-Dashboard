@@ -21,3 +21,13 @@
     @apply shadow-[0_0_15px_rgba(59,130,246,0.5)];
   }
 }
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

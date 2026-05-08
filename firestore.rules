@@ -23,8 +23,12 @@ service cloud.firestore {
       return isSignedIn() && getUserData().role == role;
     }
 
+    function isOwnerRole() {
+      return (isSignedIn() && request.auth.token.email == 'mathewsniko02@gmail.com' && isEmailVerified()) || hasRole('owner');
+    }
+
     function isAdmin() {
-      return (isSignedIn() && request.auth.token.email == 'mathewsniko02@gmail.com' && isEmailVerified()) || hasRole('admin');
+      return isOwnerRole() || hasRole('admin');
     }
 
     function isOwner(userId) {
@@ -32,7 +36,7 @@ service cloud.firestore {
     }
 
     function hasPermission(perm) {
-      return isAdmin() || (isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && perm in getUserData().permissions);
+      return isOwnerRole() || isAdmin() || (isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && perm in getUserData().permissions);
     }
 
     function isValidId(id) {
@@ -43,7 +47,7 @@ service cloud.firestore {
     function isValidUser(data) {
       return data.keys().hasAll(['uid', 'role']) 
         && data.uid == request.auth.uid 
-        && data.role in ['admin', 'user']
+        && data.role in ['owner', 'admin', 'user']
         && (data.email == null || data.email is string);
     }
 
@@ -59,9 +63,10 @@ service cloud.firestore {
       allow create: if isSignedIn() && isOwner(userId) && isValidUser(request.resource.data);
       allow update: if isSignedIn() && (
         (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'watchlist', 'newsFeeds', 'permissions'])) ||
-        isAdmin()
+        (isOwnerRole()) || // Super owner can update anyone
+        (isAdmin() && resource.data.role != 'owner' && request.resource.data.role != 'owner') // Admin can't touch owners or promote to owner
       );
-      allow delete: if isAdmin();
+      allow delete: if isOwnerRole(); // Only owner can delete users
     }
 
     match /projects/{projectId} {

@@ -8,7 +8,7 @@ interface UserProfile {
   uid: string;
   email: string | null;
   displayName: string | null;
-  role: 'admin' | 'user';
+  role: 'owner' | 'admin' | 'user';
   permissions: string[];
   watchlist?: string[];
   newsFeeds?: { name: string; url: string }[];
@@ -17,15 +17,26 @@ interface UserProfile {
 interface AuthContextType {
   user: FirebaseUser | null;
   profile: UserProfile | null;
+  effectiveRole: 'owner' | 'admin' | 'user' | null;
   loading: boolean;
+  setImpersonatedRole: (role: 'owner' | 'admin' | 'user' | null) => void;
 }
 
-const AuthContext = createContext<AuthContextType>({ user: null, profile: null, loading: true });
+const AuthContext = createContext<AuthContextType>({ 
+  user: null, 
+  profile: null, 
+  effectiveRole: null,
+  loading: true,
+  setImpersonatedRole: () => {} 
+});
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [impersonatedRole, setImpersonatedRole] = useState<'owner' | 'admin' | 'user' | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const effectiveRole = impersonatedRole || profile?.role || null;
 
   useEffect(() => {
     let unsubscribeProfile: (() => void) | null = null;
@@ -53,19 +64,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Initialize user if not exists
         try {
           const userDoc = await getDoc(userRef);
-          const isBootstrapAdmin = authUser.email === 'mathewsniko02@gmail.com';
+          const isBootstrapOwner = authUser.email === 'mathewsniko02@gmail.com';
           
           if (!userDoc.exists()) {
             const newProfile: UserProfile = {
               uid: authUser.uid,
               email: authUser.email,
               displayName: authUser.displayName,
-              role: isBootstrapAdmin ? 'admin' : 'user',
-              permissions: isBootstrapAdmin 
-                ? ['dashboard.view', 'projects.view', 'projects.edit', 'code.view', 'code.edit', 'logs.view'] 
+              role: isBootstrapOwner ? 'owner' : 'user',
+              permissions: isBootstrapOwner 
+                ? ['dashboard.view', 'projects.view', 'projects.edit', 'code.view', 'code.edit', 'logs.view', 'users.manage'] 
                 : ['dashboard.view', 'code.view', 'code.edit']
             };
             await setDoc(userRef, newProfile);
+          } else {
+            const existingData = userDoc.data() as UserProfile;
+            if (isBootstrapOwner && existingData.role !== 'owner') {
+              // Force upgrade to owner for the bootstrap user
+              await updateDoc(userRef, { 
+                role: 'owner',
+                permissions: Array.from(new Set([...existingData.permissions, 'users.manage', 'projects.view', 'projects.edit', 'logs.view']))
+              });
+            }
           }
         } catch (error) {
           handleFirestoreError(error, OperationType.GET, `users/${authUser.uid}`);
@@ -83,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading }}>
+    <AuthContext.Provider value={{ user, profile, effectiveRole, loading, setImpersonatedRole }}>
       {children}
     </AuthContext.Provider>
   );
