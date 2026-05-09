@@ -138,15 +138,15 @@ export function SettingsView() {
           <p className="text-slate-500 text-sm mt-1">Konfiguriere dein persönliches Erlebnis und verwalte Systemressourcen.</p>
         </div>
              {/* Tab Navigation */}
-        <div className="p-1 bg-[#11111a] border border-white/5 rounded-2xl flex gap-1 self-start">
+        <div className="p-1 bg-card-bg border border-border-subtle rounded-2xl flex gap-1 self-start">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
                 activeTab === tab.id 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
-                  : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+                  ? 'bg-accent text-white shadow-lg shadow-accent/20' 
+                  : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
               }`}
             >
               <tab.icon className="w-3.5 h-3.5" />
@@ -168,21 +168,21 @@ export function SettingsView() {
         >
           {activeTab === 'profile' && (
             <div className="max-w-2xl space-y-6">
-              <div className="bg-[#11111a]/60 p-8 rounded-3xl border border-white/5 space-y-8">
+              <div className="bg-card-bg p-8 rounded-3xl border border-border-subtle space-y-8">
                 <div className="flex items-center gap-6">
-                  <div className="w-24 h-24 rounded-full border-4 border-blue-600/20 p-1 relative">
+                  <div className="w-24 h-24 rounded-full border-4 border-accent/20 p-1 relative">
                     <img 
                       src={`https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.displayName || '')}&background=020617&color=fff&size=128`} 
-                      className="w-full h-full rounded-full bg-slate-800"
+                      className="w-full h-full rounded-full bg-input-bg"
                     />
-                    <button className="absolute bottom-0 right-0 p-1.5 bg-blue-600 rounded-full text-white border-2 border-[#11111a] hover:scale-110 transition-transform">
+                    <button className="absolute bottom-0 right-0 p-1.5 bg-accent rounded-full text-white border-2 border-card-bg hover:scale-110 transition-transform">
                       <SettingsIcon className="w-3.5 h-3.5" />
                     </button>
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white">{profile?.displayName}</h3>
-                    <p className="text-slate-500 text-sm">{profile?.email}</p>
-                    <div className="mt-2 inline-flex border border-white/10 px-2 py-0.5 rounded text-[10px] font-black uppercase text-blue-400 tracking-widest bg-blue-400/5">
+                    <h3 className="text-xl font-bold text-text-primary">{profile?.displayName}</h3>
+                    <p className="text-text-secondary text-sm">{profile?.email}</p>
+                    <div className="mt-2 inline-flex border border-accent/20 px-2 py-0.5 rounded text-[10px] font-black uppercase text-accent tracking-widest bg-accent/5">
                       {profile?.role}
                     </div>
                   </div>
@@ -190,22 +190,22 @@ export function SettingsView() {
 
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 gap-1.5">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Anzeigename</label>
+                    <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1">Anzeigename</label>
                     <input 
                       type="text" 
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
-                      className="bg-white/2 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-blue-500/50 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all"
+                      className="bg-input-bg border border-border-subtle rounded-xl px-4 py-3 text-text-primary text-sm focus:border-accent/50 focus:outline-none focus:ring-4 focus:ring-accent/10 transition-all"
                       placeholder="Dein Name..."
                     />
                   </div>
                   <div className="grid grid-cols-1 gap-1.5">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">E-Mail Adresse (Gelesen)</label>
+                    <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1">E-Mail Adresse (Gelesen)</label>
                     <input 
                       type="email" 
                       value={profile?.email || ''} 
                       readOnly
-                      className="bg-white/2 border border-white/10 rounded-xl px-4 py-3 text-slate-500 text-sm cursor-not-allowed opacity-50"
+                      className="bg-input-bg border border-border-subtle rounded-xl px-4 py-3 text-text-secondary text-sm cursor-not-allowed opacity-50"
                     />
                   </div>
                 </div>
@@ -215,9 +215,9 @@ export function SettingsView() {
 
           {activeTab === 'appearance' && (
             <div className="max-w-2xl space-y-6">
-              <div className="bg-[#11111a]/60 p-8 rounded-3xl border border-white/5 space-y-10">
+              <div className="bg-card-bg p-8 rounded-3xl border border-border-subtle space-y-10">
                 <section>
-                  <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-6 px-1">Theme Modus</h4>
+                  <h4 className="text-xs font-black text-text-secondary uppercase tracking-widest mb-6 px-1">Theme Modus</h4>
                   <div className="grid grid-cols-3 gap-3">
                     {[
                       { id: 'light', label: 'Hell', icon: Sun },
@@ -229,11 +229,11 @@ export function SettingsView() {
                         onClick={() => setTheme(t.id as any)}
                         className={`flex flex-col items-center gap-3 p-4 rounded-2xl border transition-all ${
                           theme === t.id 
-                            ? 'bg-blue-600/10 border-blue-600 text-white' 
-                            : 'bg-white/2 border-white/5 text-slate-500 hover:border-white/10'
+                            ? 'bg-accent/10 border-accent text-text-primary' 
+                            : 'bg-input-bg border-border-subtle text-text-secondary hover:border-accent/30'
                         }`}
                       >
-                        <t.icon className={`w-6 h-6 ${theme === t.id ? 'text-blue-400' : 'text-slate-600'}`} />
+                        <t.icon className={`w-6 h-6 ${theme === t.id ? 'text-accent' : 'text-text-secondary'}`} />
                         <span className="text-[10px] font-bold uppercase tracking-widest">{t.label}</span>
                       </button>
                     ))}
@@ -241,7 +241,7 @@ export function SettingsView() {
                 </section>
 
                 <section>
-                  <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-6 px-1">Akzentfarbe</h4>
+                  <h4 className="text-xs font-black text-text-secondary uppercase tracking-widest mb-6 px-1">Akzentfarbe</h4>
                   <div className="flex flex-wrap gap-4">
                     {['blue', 'purple', 'emerald', 'amber', 'rose', 'indigo'].map(color => (
                       <button
@@ -254,7 +254,7 @@ export function SettingsView() {
                           color === 'amber' ? 'bg-amber-600' :
                           color === 'rose' ? 'bg-rose-600' :
                           'bg-indigo-600'
-                        } ${accentColor === color ? 'scale-110 shadow-xl ring-4 ring-white/10' : 'hover:scale-105 shadow-md'}`}
+                        } ${accentColor === color ? 'scale-110 shadow-xl ring-4 ring-accent/20' : 'hover:scale-105 shadow-md'}`}
                       >
                         {accentColor === color && (
                           <CheckCircle className="w-5 h-5 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
@@ -269,22 +269,22 @@ export function SettingsView() {
 
           {activeTab === 'notifications' && (
             <div className="max-w-2xl space-y-6">
-              <div className="bg-[#11111a]/60 p-8 rounded-3xl border border-white/5 space-y-6">
+              <div className="bg-card-bg p-8 rounded-3xl border border-border-subtle space-y-6">
                 {[
                   { id: 'system', label: 'System Benachrichtigungen', desc: 'Warnungen über Systemstatus und Updates.' },
                   { id: 'trading', label: 'Handels-Signale', desc: 'Alerts wenn KI-Signale generiert werden.' },
                   { id: 'security', label: 'Sicherheits-Aktivitäten', desc: 'Versuchte Logins und Passwortänderungen.' },
                   { id: 'email', label: 'E-Mail Zusammenfassung', desc: 'Wöchentlicher Report deiner Performance.' },
                 ].map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-4 bg-white/2 rounded-2xl border border-white/5">
+                  <div key={item.id} className="flex items-center justify-between p-4 bg-input-bg rounded-2xl border border-border-subtle">
                     <div>
-                      <p className="text-sm font-bold text-white tracking-tight">{item.label}</p>
-                      <p className="text-[10px] text-slate-500 leading-tight mt-1 uppercase tracking-wider">{item.desc}</p>
+                      <p className="text-sm font-bold text-text-primary tracking-tight">{item.label}</p>
+                      <p className="text-[10px] text-text-secondary leading-tight mt-1 uppercase tracking-wider">{item.desc}</p>
                     </div>
                     <button 
                       onClick={() => setNotifications(prev => ({ ...prev, [item.id]: !prev[item.id as keyof typeof prev] }))}
                       className={`w-12 h-6 rounded-full p-1 transition-all ${
-                        notifications[item.id as keyof typeof notifications] ? 'bg-blue-600' : 'bg-slate-700'
+                        notifications[item.id as keyof typeof notifications] ? 'bg-accent' : 'bg-slate-700'
                       } relative`}
                     >
                       <motion.div 
@@ -340,7 +340,7 @@ export function SettingsView() {
                                 ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
                                 : user.role === 'admin' 
                                   ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
-                                  : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                                  : 'bg-accent/10 text-accent border border-accent/20'
                             }`}>
                               {user.role === 'owner' ? <ShieldAlert className="w-3 h-3" /> : user.role === 'admin' ? <ShieldAlert className="w-3 h-3" /> : <Shield className="w-3 h-3" />}
                               {user.role}
@@ -356,7 +356,7 @@ export function SettingsView() {
                             <div className="flex justify-end gap-2">
                               <button 
                                 onClick={() => toggleRole(user)}
-                                className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-[10px] font-bold text-slate-400 hover:border-blue-500/30 hover:text-blue-400 hover:bg-white/10 transition-all shadow-sm active:scale-95"
+                                className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-[10px] font-bold text-slate-400 hover:border-accent/30 hover:text-accent hover:bg-white/10 transition-all shadow-sm active:scale-95"
                               >
                                 Rolle ändern
                               </button>
@@ -389,7 +389,7 @@ export function SettingsView() {
                     ? 'bg-emerald-500 text-white' 
                     : isSaving 
                       ? 'bg-slate-800 text-slate-400' 
-                      : 'bg-white text-black hover:bg-emerald-500 hover:text-white'
+                      : 'bg-text-primary text-brand-bg hover:bg-accent hover:text-white'
                 }`}
               >
                 <div className="relative z-10 flex items-center gap-2">

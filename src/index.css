@@ -1,20 +1,41 @@
 @import "tailwindcss";
 
-@theme {
-  --color-brand-bg: #050508;
-  --color-card-bg: rgba(17, 17, 26, 0.6);
-  --color-border-subtle: rgba(255, 255, 255, 0.05);
-  --color-accent: rgb(var(--accent-rgb));
-  --color-accent-soft: rgba(var(--accent-rgb), 0.1);
-}
-
 :root {
   --accent-rgb: 59, 130, 246;
+  --brand-bg: #ffffff;
+  --card-bg: #ffffff;
+  --card-bg-hover: #f8fafc;
+  --border-subtle: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --input-bg: #f1f5f9;
+}
+
+.dark {
+  --brand-bg: #050508;
+  --card-bg: rgba(17, 17, 26, 0.6);
+  --card-bg-hover: rgba(30, 30, 40, 0.8);
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --text-primary: #cbd5e1;
+  --text-secondary: #94a3b8;
+  --input-bg: rgba(255, 255, 255, 0.02);
+}
+
+@theme {
+  --color-brand-bg: var(--brand-bg);
+  --color-card-bg: var(--card-bg);
+  --color-card-hover: var(--card-bg-hover);
+  --color-border-subtle: var(--border-subtle);
+  --color-accent: rgb(var(--accent-rgb));
+  --color-accent-soft: rgba(var(--accent-rgb), 0.1);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-input-bg: var(--input-bg);
 }
 
 @layer base {
   body {
-    @apply bg-brand-bg text-slate-300 antialiased font-sans;
+    @apply bg-brand-bg text-text-primary antialiased font-sans transition-colors duration-300;
   }
 }
 
@@ -23,8 +44,8 @@
     @apply bg-card-bg backdrop-blur-xl border border-border-subtle rounded-2xl transition-all duration-300;
   }
   
-  .glow-blue {
-    @apply shadow-[0_0_15px_rgba(59,130,246,0.5)];
+  .glow-accent {
+    @apply shadow-[0_0_15px_rgba(var(--accent-rgb),0.5)];
   }
 }
 

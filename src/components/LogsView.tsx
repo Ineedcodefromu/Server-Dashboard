@@ -77,7 +77,7 @@ export function LogsView() {
       case 'error': return 'text-red-400 bg-red-400/10 border-red-400/20';
       case 'warning': return 'text-amber-400 bg-amber-400/10 border-amber-400/20';
       case 'success': return 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20';
-      default: return 'text-blue-400 bg-blue-400/10 border-blue-400/20';
+      default: return 'text-accent bg-accent/10 border-accent/20';
     }
   };
 
@@ -94,19 +94,19 @@ export function LogsView() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h2 className="text-3xl font-bold text-white tracking-tight">System-Protokolle</h2>
-          <p className="text-slate-500 text-sm">Echtzeit-Überwachung der Dashboard-Aktivitäten und Sicherheitsereignisse.</p>
+          <h2 className="text-3xl font-bold bg-clip-text text-text-primary tracking-tight">System-Protokolle</h2>
+          <p className="text-text-secondary text-sm">Echtzeit-Überwachung der Dashboard-Aktivitäten und Sicherheitsereignisse.</p>
         </div>
         
-        <div className="flex items-center gap-2 bg-white/5 p-1 rounded-xl border border-white/10">
+        <div className="flex items-center gap-2 bg-input-bg p-1 rounded-xl border border-border-subtle">
           {(['all', 'info', 'warning', 'error'] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
               className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${
                 filter === f 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
-                  : 'text-slate-500 hover:text-slate-300'
+                  ? 'bg-accent text-white shadow-lg shadow-accent/20' 
+                  : 'text-text-secondary hover:text-text-primary'
               }`}
             >
               {f}
@@ -115,14 +115,14 @@ export function LogsView() {
         </div>
       </div>
 
-      <div className="bg-[#0a0a0f]/60 rounded-3xl border border-white/5 overflow-hidden flex flex-col min-h-[600px]">
-        <div className="p-4 border-b border-white/5 bg-white/2 flex items-center justify-between">
+      <div className="bg-card-bg rounded-3xl border border-border-subtle overflow-hidden flex flex-col min-h-[600px] transition-colors duration-300">
+        <div className="p-4 border-b border-border-subtle bg-input-bg/50 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Live Stream • {filteredLogs.length} Einträge</span>
+            <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
+            <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">Live Stream • {filteredLogs.length} Einträge</span>
           </div>
           <div className="flex items-center gap-4">
-             <span className="text-[10px] text-slate-700 font-mono">Filter: {filter.toUpperCase()}</span>
+             <span className="text-[10px] text-text-secondary font-mono">Filter: {filter.toUpperCase()}</span>
           </div>
         </div>
 
@@ -130,7 +130,7 @@ export function LogsView() {
           {isLoading ? (
             <div className="flex items-center justify-center h-64">
               <div className="flex flex-col items-center gap-4">
-                <Clock className="w-8 h-8 text-blue-500 animate-spin" />
+                <Clock className="w-8 h-8 text-accent animate-spin" />
                 <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Lade Protokolle...</p>
               </div>
             </div>
@@ -140,22 +140,22 @@ export function LogsView() {
             </div>
           ) : (
             <table className="w-full border-collapse">
-              <thead className="sticky top-0 bg-[#0a0a0f] z-10 border-b border-white/5">
-                <tr className="text-[9px] uppercase font-bold text-slate-600 tracking-[0.2em] text-left">
+              <thead className="sticky top-0 bg-card-bg z-10 border-b border-border-subtle">
+                <tr className="text-[9px] uppercase font-bold text-text-secondary tracking-[0.2em] text-left">
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4">Zeitstempel</th>
                   <th className="px-6 py-4">Quelle</th>
                   <th className="px-6 py-4">Ereignis</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-border-subtle">
                 <AnimatePresence initial={false}>
                   {filteredLogs.map((log) => (
                     <motion.tr 
                       key={log.id}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
-                      className="group hover:bg-white/[0.02] transition-colors"
+                      className="group hover:bg-card-hover transition-colors"
                     >
                       <td className="px-6 py-4">
                         <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-[9px] font-black uppercase tracking-wider ${getTypeStyles(log.type)}`}>
@@ -163,24 +163,24 @@ export function LogsView() {
                           {log.type}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-[11px] font-mono text-slate-500 whitespace-nowrap">
+                      <td className="px-6 py-4 text-[11px] font-mono text-text-secondary whitespace-nowrap">
                         {log.timestamp?.toDate ? log.timestamp.toDate().toLocaleString() : new Date().toLocaleString()}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded-sm">
+                          <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest bg-input-bg px-2 py-0.5 rounded-sm">
                             {log.source}
                           </span>
                           {log.isBackend && (
-                            <span className="text-[8px] font-black text-blue-500/80 uppercase">System</span>
+                            <span className="text-[8px] font-black text-accent/80 uppercase">System</span>
                           )}
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-1">
-                          <span className="text-sm text-white font-medium">{log.message}</span>
+                          <span className="text-sm text-text-primary font-medium group-hover:text-accent transition-colors">{log.message}</span>
                           {log.details && (
-                            <span className="text-xs text-slate-600 font-mono truncate max-w-xl group-hover:text-slate-500 transition-colors">
+                            <span className="text-xs text-text-secondary font-mono truncate max-w-xl transition-colors">
                               {log.details}
                             </span>
                           )}

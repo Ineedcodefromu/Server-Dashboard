@@ -135,14 +135,14 @@ export function CodeView() {
                   required
                   value={editingId ? editSnippet.title : newSnippet.title}
                   onChange={e => editingId ? setEditSnippet({...editSnippet, title: e.target.value}) : setNewSnippet({...newSnippet, title: e.target.value})}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-blue-500/20" 
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-accent/20" 
                 />
                 <input 
                   type="text" 
                   placeholder="Sprache (z.B. Python)"
                   value={editingId ? editSnippet.language : newSnippet.language}
                   onChange={e => editingId ? setEditSnippet({...editSnippet, language: e.target.value}) : setNewSnippet({...newSnippet, language: e.target.value})}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-blue-500/20" 
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-accent/20" 
                 />
               </div>
               <textarea 
@@ -150,14 +150,14 @@ export function CodeView() {
                 required
                 value={editingId ? editSnippet.code : newSnippet.code}
                 onChange={e => editingId ? setEditSnippet({...editSnippet, code: e.target.value}) : setNewSnippet({...newSnippet, code: e.target.value})}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-blue-500/20 min-h-[200px] font-mono text-sm"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-accent/20 min-h-[200px] font-mono text-sm"
               />
               <input 
                 type="text" 
                 placeholder="Tags (kommagetrennt)"
                 value={editingId ? editSnippet.tags : newSnippet.tags}
                 onChange={e => editingId ? setEditSnippet({...editSnippet, tags: e.target.value}) : setNewSnippet({...newSnippet, tags: e.target.value})}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-blue-500/20" 
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-accent/20" 
               />
               <div className="flex justify-end gap-3 pt-4">
                 <button 
@@ -170,7 +170,7 @@ export function CodeView() {
                 >
                   Abbrechen
                 </button>
-                <button type="submit" className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20">
+                <button type="submit" className="px-8 py-3 bg-accent text-white rounded-xl font-bold hover:opacity-90 transition-colors shadow-lg shadow-accent/20">
                   {editingId ? 'Änderungen speichern' : 'Snippet erstellen'}
                 </button>
               </div>
@@ -219,14 +219,14 @@ export function CodeView() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {snippets.map((snippet) => (
-          <div key={snippet.id} className="bg-[#11111a]/60 rounded-3xl border border-white/5 overflow-hidden flex flex-col group hover:border-blue-500/20 transition-all">
+          <div key={snippet.id} className="bg-[#11111a]/60 rounded-3xl border border-white/5 overflow-hidden flex flex-col group hover:border-accent/20 transition-all">
             <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/2">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-white/5 rounded-lg border border-white/5 group-hover:scale-110 transition-transform">
-                  <Terminal className="w-4 h-4 text-blue-400" />
+                  <Terminal className="w-4 h-4 text-accent" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-white group-hover:text-blue-400 transition-colors">{snippet.title}</h3>
+                  <h3 className="font-bold text-white group-hover:text-accent transition-colors">{snippet.title}</h3>
                   <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest mt-0.5">{snippet.language}</p>
                 </div>
               </div>
@@ -254,12 +254,12 @@ export function CodeView() {
                 </button>
               </div>
             </div>
-            <div className="p-6 bg-[#050508] text-slate-400 font-mono text-sm overflow-x-auto min-h-[120px] custom-scrollbar selection:bg-blue-500/30">
+            <div className="p-6 bg-[#050508] text-slate-400 font-mono text-sm overflow-x-auto min-h-[120px] custom-scrollbar selection:bg-accent/30">
               <pre><code className="block">{snippet.code}</code></pre>
             </div>
             <div className="p-4 bg-white/2 border-t border-white/5 flex gap-2 flex-wrap">
               {snippet.tags.map(tag => (
-                <span key={tag} className="flex items-center gap-1 px-2.5 py-1 bg-white/5 rounded-lg text-[10px] font-bold text-slate-500 hover:text-blue-400 transition-colors cursor-default">
+                <span key={tag} className="flex items-center gap-1 px-2.5 py-1 bg-white/5 rounded-lg text-[10px] font-bold text-slate-500 hover:text-accent transition-colors cursor-default">
                   <Hash className="w-3 h-3" />
                   {tag}
                 </span>

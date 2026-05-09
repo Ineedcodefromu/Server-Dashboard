@@ -48,7 +48,7 @@ export function ProjectsView() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'planned': return <Clock className="w-4 h-4 text-slate-400" />;
-      case 'active': return <PlayCircle className="w-4 h-4 text-blue-500" />;
+      case 'active': return <PlayCircle className="w-4 h-4 text-accent" />;
       case 'paused': return <AlertCircle className="w-4 h-4 text-amber-500" />;
       case 'completed': return <CheckCircle2 className="w-4 h-4 text-green-500" />;
       default: return null;
@@ -57,14 +57,14 @@ export function ProjectsView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-[#11111a]/60 backdrop-blur-xl p-6 rounded-3xl border border-white/5">
+      <div className="flex justify-between items-center glass-card p-6 rounded-3xl">
         <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight">Projekt-Übersicht</h2>
-          <p className="text-slate-500 text-sm">Verwalte deine aktuellen Entwicklungsziele.</p>
+          <h2 className="text-2xl font-bold text-text-primary tracking-tight">Projekt-Übersicht</h2>
+          <p className="text-text-secondary text-sm">Verwalte deine aktuellen Entwicklungsziele.</p>
         </div>
         <button 
           onClick={() => setIsAdding(true)}
-          className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20 active:scale-95"
+          className="bg-accent text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-xl shadow-accent/20 active:scale-95"
         >
           <Plus className="w-5 h-5" />
           Neues Projekt
@@ -87,12 +87,12 @@ export function ProjectsView() {
                   required
                   value={newProject.title}
                   onChange={e => setNewProject({...newProject, title: e.target.value})}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-blue-500/20" 
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-accent/20" 
                 />
                 <select 
                   value={newProject.status}
                   onChange={e => setNewProject({...newProject, status: e.target.value as any})}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-blue-500/20"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-accent/20"
                 >
                   <option value="planned">Geplant</option>
                   <option value="active" className="bg-[#050508]">Aktiv</option>
@@ -104,7 +104,7 @@ export function ProjectsView() {
                 placeholder="Beschreibung..."
                 value={newProject.description}
                 onChange={e => setNewProject({...newProject, description: e.target.value})}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-blue-500/20 min-h-[100px]"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-accent/20 min-h-[100px]"
               />
               <div className="flex justify-end gap-3">
                 <button type="button" onClick={() => setIsAdding(false)} className="px-6 py-3 text-slate-500 font-bold hover:text-white transition-colors">Abbrechen</button>
@@ -120,11 +120,11 @@ export function ProjectsView() {
           <motion.div 
             layout
             key={project.id}
-            className="bg-[#11111a]/60 rounded-3xl border border-white/5 p-6 hover:border-blue-500/30 transition-all group"
+            className="bg-[#11111a]/60 rounded-3xl border border-white/5 p-6 hover:border-accent/30 transition-all group"
           >
             <div className="flex justify-between items-start mb-6">
               <div className="p-3 bg-white/5 rounded-xl border border-white/5 group-hover:scale-110 transition-transform">
-                <Briefcase className="w-5 h-5 text-blue-400" />
+                <Briefcase className="w-5 h-5 text-accent" />
               </div>
               <div className="flex items-center gap-1.5 px-3 py-1 bg-white/5 border border-white/5 rounded-full">
                 {getStatusIcon(project.status)}
@@ -132,19 +132,19 @@ export function ProjectsView() {
               </div>
             </div>
 
-            <h3 className="text-xl font-bold text-white mb-2 truncate group-hover:text-blue-400 transition-colors">{project.title}</h3>
+            <h3 className="text-xl font-bold text-white mb-2 truncate group-hover:text-accent transition-colors">{project.title}</h3>
             <p className="text-sm text-slate-500 line-clamp-2 h-10 mb-6 leading-relaxed">{project.description}</p>
 
             <div className="space-y-3">
               <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
                 <span className="text-slate-600">Fortschritt</span>
-                <span className="text-blue-400">{project.progress}%</span>
+                <span className="text-accent">{project.progress}%</span>
               </div>
               <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
                 <motion.div 
                   initial={{ width: 0 }}
                   animate={{ width: `${project.progress}%` }}
-                  className="h-full bg-gradient-to-r from-blue-600 to-indigo-500 shadow-[0_0_10px_rgba(59,130,246,0.3)]"
+                  className="h-full bg-gradient-to-r from-accent to-indigo-500 shadow-[0_0_10px_rgba(var(--accent-rgb),0.3)]"
                 />
               </div>
             </div>

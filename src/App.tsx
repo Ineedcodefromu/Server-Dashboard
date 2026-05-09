@@ -99,7 +99,7 @@ function ProfileMenu() {
         className={`w-10 h-10 rounded-full border p-0.5 shrink-0 transition-all duration-300 relative group overflow-visible ${
           isEmulating 
             ? 'border-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)]' 
-            : 'border-white/10 hover:border-blue-500/50'
+            : 'border-white/10 hover:border-accent/50'
         }`}
       >
         <img 
@@ -129,8 +129,8 @@ function ProfileMenu() {
           >
             <div className="p-4 border-b border-white/5 bg-white/2">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                  <UserIcon className="w-5 h-5 text-blue-400" />
+                <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
+                  <UserIcon className="w-5 h-5 text-accent" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-white truncate">{profile.displayName}</p>
@@ -141,7 +141,7 @@ function ProfileMenu() {
                 <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${
                   profile.role === 'owner' ? 'bg-purple-500/20 text-purple-400' :
                   profile.role === 'admin' ? 'bg-red-500/20 text-red-400' :
-                  'bg-blue-500/20 text-blue-400'
+                  'bg-accent/20 text-accent'
                 }`}>
                   {profile.role}
                 </span>
@@ -166,7 +166,7 @@ function ProfileMenu() {
                       }}
                       className={`w-full text-left px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center justify-between ${
                         effectiveRole === r 
-                          ? 'bg-blue-500/20 text-blue-400' 
+                          ? 'bg-accent/20 text-accent' 
                           : 'text-slate-400 hover:bg-white/5 hover:text-white'
                       }`}
                     >
@@ -222,7 +222,7 @@ function Sidebar({ activeTab, setActiveTab }: { activeTab: string, setActiveTab:
   return (
     <div className="fixed left-0 top-0 h-screen w-20 bg-[#0a0a0f]/40 backdrop-blur-md border-r border-white/5 flex flex-col items-center py-8 z-20 overflow-y-auto no-scrollbar">
       <div className="mb-10">
-        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg glow-blue flex items-center justify-center">
+        <div className="w-10 h-10 bg-gradient-to-br from-accent to-indigo-600 rounded-lg glow-accent flex items-center justify-center">
           <Shield className="w-6 h-6 text-white" />
         </div>
       </div>
@@ -234,7 +234,7 @@ function Sidebar({ activeTab, setActiveTab }: { activeTab: string, setActiveTab:
             onClick={() => setActiveTab(item.id)}
             className={`p-3 rounded-xl transition-all duration-300 group relative ${
               activeTab === item.id 
-                ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 
+                ? 'bg-accent/20 text-accent border border-accent/30' 
                 : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
             }`}
             title={item.label}
@@ -243,7 +243,7 @@ function Sidebar({ activeTab, setActiveTab }: { activeTab: string, setActiveTab:
             {activeTab === item.id && (
               <motion.div 
                 layoutId="active-pill"
-                className="absolute -right-1 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-500 rounded-full"
+                className="absolute -right-1 top-1/2 -translate-y-1/2 w-1 h-6 bg-accent rounded-full"
               />
             )}
           </button>
@@ -259,9 +259,9 @@ function Sidebar({ activeTab, setActiveTab }: { activeTab: string, setActiveTab:
 
 function StatCard({ label, value, icon: Icon, trend }: { label: string, value: string, icon: any, trend?: string }) {
   return (
-    <div className="bg-[#11111a]/60 rounded-2xl border border-white/5 p-6 flex flex-col justify-between hover:border-blue-500/30 hover:scale-[1.02] transition-all group cursor-pointer">
+    <div className="bg-[#11111a]/60 rounded-2xl border border-white/5 p-6 flex flex-col justify-between hover:border-accent/30 hover:scale-[1.02] transition-all group cursor-pointer">
       <div className="flex justify-between items-start mb-4">
-        <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
+        <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
           <Icon className="w-6 h-6" />
         </div>
         <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">{label}</span>
@@ -315,12 +315,12 @@ function DashboardOverview() {
         <div className="lg:col-span-12 xl:col-span-7 bg-[#11111a]/60 rounded-2xl border border-white/5 overflow-hidden flex flex-col">
           <div className="p-6 border-b border-white/5 bg-white/2 flex items-center justify-between">
             <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
-              <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span> Projektstatus
+              <span className="w-2 h-2 bg-accent rounded-full animate-pulse"></span> Projektstatus
             </h3>
           </div>
           <div className="p-8 space-y-8">
             {[
-              { name: 'OmniDash Platform', status: 'Aktiv', progress: 85, color: 'bg-blue-500' },
+              { name: 'OmniDash Platform', status: 'Aktiv', progress: 85, color: 'bg-accent' },
               { name: 'Mobile App Redesign', status: 'Geplant', progress: 10, color: 'bg-slate-700' },
               { name: 'API Integration', status: 'Testen', progress: 60, color: 'bg-indigo-500' },
             ].map((p) => (
@@ -336,7 +336,7 @@ function DashboardOverview() {
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${p.progress}%` }}
-                    className={`${p.color} h-full shadow-[0_0_10px_rgba(59,130,246,0.3)]`} 
+                    className={`${p.color} h-full shadow-[0_0_10px_rgba(var(--accent-rgb),0.3)]`} 
                   />
                 </div>
               </div>
@@ -357,10 +357,10 @@ function DashboardOverview() {
                   <div className="flex items-center gap-4">
                     <div className={`w-2 h-2 rounded-full ${
                       n.type === 'error' ? 'bg-red-500' : 
-                      n.type === 'warning' ? 'bg-amber-500' : 'bg-blue-500'
+                      n.type === 'warning' ? 'bg-amber-500' : 'bg-accent'
                     }`} />
                     <div>
-                      <h4 className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors line-clamp-1">{n.message}</h4>
+                      <h4 className="text-sm font-bold text-white group-hover:text-accent transition-colors line-clamp-1">{n.message}</h4>
                       <span className="text-[10px] text-slate-600 font-mono italic uppercase">{n.source}</span>
                     </div>
                   </div>
@@ -385,12 +385,12 @@ function DashboardOverview() {
 function SectionPlaceholder({ title, description }: { title: string, description: string }) {
   return (
     <div className="flex flex-col items-center justify-center p-20 bg-[#11111a]/40 rounded-3xl border border-dashed border-white/10">
-      <div className="w-16 h-16 rounded-2xl bg-blue-500/5 flex items-center justify-center mb-6">
-        <Shield className="w-8 h-8 text-blue-500/20" />
+      <div className="w-16 h-16 rounded-2xl bg-accent/5 flex items-center justify-center mb-6">
+        <Shield className="w-8 h-8 text-accent/20" />
       </div>
       <h2 className="text-2xl font-bold text-white mb-2 tracking-tight">{title}</h2>
       <p className="text-slate-500 text-center max-w-md text-sm">{description}</p>
-      <button className="mt-8 px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-blue-500/20">
+      <button className="mt-8 px-6 py-3 bg-accent text-white rounded-xl font-bold hover:opacity-90 transition-all hover:scale-105 active:scale-95 shadow-xl shadow-accent/20">
         Modul konfigurieren
       </button>
     </div>
@@ -409,14 +409,14 @@ function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#050508] flex items-center justify-center p-6 relative overflow-hidden">
-      <div className="absolute top-[-100px] left-[-100px] w-[400px] h-[400px] bg-blue-600/10 rounded-full blur-[100px]"></div>
-      <div className="absolute bottom-[-100px] right-[-100px] w-[500px] h-[500px] bg-indigo-600/5 rounded-full blur-[120px]"></div>
+      <div className="absolute top-[-100px] left-[-100px] w-[400px] h-[400px] bg-accent/20 rounded-full blur-[100px]"></div>
+      <div className="absolute bottom-[-100px] right-[-100px] w-[500px] h-[500px] bg-accent/10 rounded-full blur-[120px]"></div>
 
       <div className="w-full max-w-md bg-[#11111a]/80 backdrop-blur-2xl rounded-3xl border border-white/5 shadow-2xl p-10 text-center relative z-10">
-        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-8 glow-blue">
+        <div className="w-16 h-16 bg-gradient-to-br from-accent to-accent/60 rounded-2xl flex items-center justify-center mx-auto mb-8 glow-accent">
           <Shield className="w-8 h-8 text-white" />
         </div>
-        <h1 className="text-3xl font-black text-white mb-4 tracking-tighter uppercase">Omni<span className="text-blue-500">Dash</span></h1>
+        <h1 className="text-3xl font-black text-white mb-4 tracking-tighter uppercase">Omni<span className="text-accent">Dash</span></h1>
         <p className="text-slate-500 mb-10 text-sm">Identity Management Service • Bitte authentifizieren Sie sich.</p>
         
         <button 
@@ -442,7 +442,7 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
   return (
     <div className="bg-[#050508] min-h-screen pl-20 relative overflow-hidden flex flex-col">
       {/* Decorative Orbs */}
-      <div className="fixed top-[-100px] left-20 w-[400px] h-[400px] bg-blue-600/5 rounded-full blur-[100px] pointer-events-none"></div>
+      <div className="fixed top-[-100px] left-20 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px] pointer-events-none"></div>
       <div className="fixed bottom-[-100px] right-[-100px] w-[500px] h-[500px] bg-indigo-600/5 rounded-full blur-[120px] pointer-events-none"></div>
 
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -452,7 +452,7 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
           <LayoutDashboard className="w-3 h-3" />
           <span>Central Hub</span>
           <span className="text-white/20">/</span>
-          <span className="text-blue-400">{activeTab}</span>
+          <span className="text-accent">{activeTab}</span>
         </div>
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 rounded-full border border-green-500/20">
@@ -501,7 +501,7 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
         <div className="flex gap-4 items-center uppercase tracking-widest font-bold">
           <span>OmniDash Core</span>
           <span className="w-1 h-1 bg-white/10 rounded-full"></span>
-          <span className="text-blue-500/60">Ready</span>
+          <span className="text-accent/60">Ready</span>
         </div>
         <div className="flex gap-6 items-center uppercase tracking-widest font-bold">
           <div className="flex gap-2 items-center text-emerald-500">
@@ -535,10 +535,10 @@ function AppContent({ activeTab, setActiveTab }: { activeTab: string, setActiveT
           <motion.div 
             animate={{ rotate: 360 }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-            className="w-16 h-16 border-2 border-white/5 border-t-blue-500 rounded-full"
+            className="w-16 h-16 border-2 border-white/5 border-t-accent rounded-full"
           />
           <div className="absolute inset-0 flex items-center justify-center">
-            <Shield className="w-6 h-6 text-blue-500 glow-blue animate-pulse" />
+            <Shield className="w-6 h-6 text-accent glow-accent animate-pulse" />
           </div>
         </div>
       </div>
@@ -546,7 +546,7 @@ function AppContent({ activeTab, setActiveTab }: { activeTab: string, setActiveT
   }
 
   return (
-    <div className="antialiased text-slate-900 font-sans">
+    <div className="antialiased min-h-screen bg-brand-bg text-text-primary font-sans transition-colors duration-300">
       {!user ? (
         <LoginPage />
       ) : (

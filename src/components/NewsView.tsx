@@ -165,31 +165,31 @@ export function NewsView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-3xl border border-slate-200">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-card-bg p-6 rounded-3xl border border-border-subtle shadow-sm">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Nachrichten</h2>
-          <p className="text-slate-500">Aktuelle Feeds aus aller Welt.</p>
+          <h2 className="text-2xl font-bold text-text-primary">Nachrichten</h2>
+          <p className="text-text-secondary">Aktuelle Feeds aus aller Welt.</p>
         </div>
         
         <div className="flex flex-wrap gap-4 items-center">
           <button 
             onClick={() => fetchFeed()}
             disabled={loading}
-            className={`p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-all ${loading ? 'animate-spin opacity-50' : ''}`}
+            className={`p-2 rounded-xl border border-border-subtle text-text-secondary hover:text-accent hover:border-accent/30 transition-all ${loading ? 'animate-spin opacity-50' : ''}`}
             title="Aktualisieren"
           >
             <RefreshCcw className="w-4 h-4" />
           </button>
 
-          <div className="flex gap-2 p-1 bg-slate-50 rounded-2xl border border-slate-100 overflow-x-auto max-w-full items-center">
+          <div className="flex gap-2 p-1 bg-input-bg rounded-2xl border border-border-subtle overflow-x-auto max-w-full items-center">
             {feeds.map(f => (
               <div key={f.url} className="relative group">
                 <button
                   onClick={() => setActiveUrl(f.url)}
                   className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
                     activeUrl === f.url 
-                      ? 'bg-white text-blue-600 shadow-sm shadow-blue-500/10' 
-                      : 'text-slate-500 hover:text-slate-900'
+                      ? 'bg-card-bg text-accent shadow-sm shadow-accent/10 border border-border-subtle' 
+                      : 'text-text-secondary hover:text-text-primary'
                   }`}
                 >
                   {f.name}
@@ -206,14 +206,14 @@ export function NewsView() {
             ))}
             <button 
               onClick={() => setIsAdding(true)}
-              className="px-3 py-2 text-slate-400 hover:text-slate-900 transition-colors"
+              className="px-3 py-2 text-text-secondary hover:text-text-primary transition-colors"
               title="Feed hinzufügen"
             >
               <Plus className="w-4 h-4" />
             </button>
             <button 
               onClick={resetToDefaults}
-              className="px-3 py-2 text-slate-400 hover:text-red-500 transition-colors border-l border-slate-200"
+              className="px-3 py-2 text-text-secondary hover:text-red-500 transition-colors border-l border-border-subtle"
               title="Standard wiederherstellen"
             >
               <RefreshCcw className="w-4 h-4" />
@@ -244,13 +244,13 @@ export function NewsView() {
                 required
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-2xl outline-hidden focus:ring-2 focus:ring-blue-500/20"
+                className="w-full pl-12 pr-4 py-3 bg-input-bg border border-border-subtle text-text-primary rounded-2xl outline-hidden focus:ring-2 focus:ring-accent/20"
               />
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary" />
               <button 
                 type="submit"
                 disabled={isSearching}
-                className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-1.5 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors disabled:opacity-50"
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-1.5 bg-accent text-white rounded-xl font-bold hover:opacity-90 transition-colors disabled:opacity-50"
               >
                 {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Suchen'}
               </button>
@@ -262,13 +262,13 @@ export function NewsView() {
                   <button
                     key={i}
                     onClick={() => addFeedFromSearch(result.name, result.url)}
-                    className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50 transition-all text-left"
+                    className="flex items-center justify-between p-4 rounded-2xl border border-border-subtle hover:border-accent/30 hover:bg-accent/5 transition-all text-left"
                   >
                     <div>
-                      <p className="font-bold text-slate-900 text-sm">{result.name}</p>
-                      <p className="text-[10px] text-slate-400 truncate max-w-[200px]">{result.url}</p>
+                      <p className="font-bold text-text-primary text-sm">{result.name}</p>
+                      <p className="text-[10px] text-text-secondary truncate max-w-[200px]">{result.url}</p>
                     </div>
-                    <Plus className="w-4 h-4 text-blue-500" />
+                    <Plus className="w-4 h-4 text-accent" />
                   </button>
                 ))}
               </div>
@@ -324,27 +324,27 @@ export function NewsView() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 key={item.link || idx}
-                className="bg-white flex flex-col rounded-3xl border border-slate-200 hover:border-blue-500/30 transition-all hover:shadow-xl hover:shadow-blue-500/5 group"
+                className="bg-card-bg flex flex-col rounded-3xl border border-border-subtle hover:border-accent/30 transition-all hover:shadow-xl hover:shadow-accent/5 group"
               >
                 <div className="p-6 flex-1">
-                  <div className="flex items-center gap-2 text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-3">
+                  <div className="flex items-center gap-2 text-[10px] font-bold text-accent uppercase tracking-widest mb-3">
                     <Clock className="w-3 h-3" />
                     {item.pubDate ? formatDistanceToNow(new Date(item.pubDate), { addSuffix: true, locale: de }) : 'Gerade eben'}
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900 leading-snug mb-3 group-hover:text-blue-600 transition-colors">
+                  <h3 className="text-lg font-bold text-text-primary leading-snug mb-3 group-hover:text-accent transition-colors">
                     {item.title}
                   </h3>
-                  <p className="text-sm text-slate-500 line-clamp-3 leading-relaxed">
+                  <p className="text-sm text-text-secondary line-clamp-3 leading-relaxed">
                     {item.contentSnippet || 'Keine Beschreibung verfügbar.'}
                   </p>
                 </div>
-                <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 mt-auto flex justify-between items-center rounded-b-3xl">
-                  <span className="text-xs font-bold text-slate-400">{feed.title}</span>
+                <div className="px-6 py-4 bg-input-bg border-t border-border-subtle mt-auto flex justify-between items-center rounded-b-3xl">
+                  <span className="text-xs font-bold text-text-secondary">{feed.title}</span>
                   <a 
                     href={item.link} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="p-2 bg-white border border-slate-200 rounded-xl text-slate-600 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
+                    className="p-2 bg-card-bg border border-border-subtle rounded-xl text-text-secondary hover:text-accent hover:border-accent/30 transition-all shadow-sm"
                   >
                     <ExternalLink className="w-4 h-4" />
                   </a>
