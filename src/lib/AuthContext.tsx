@@ -10,6 +10,14 @@ interface UserProfile {
   displayName: string | null;
   role: 'owner' | 'admin' | 'user';
   permissions: string[];
+  theme?: 'light' | 'dark' | 'system';
+  accentColor?: 'blue' | 'purple' | 'emerald' | 'amber' | 'rose' | 'indigo';
+  notifications?: {
+    system: boolean;
+    trading: boolean;
+    security: boolean;
+    email: boolean;
+  };
   watchlist?: string[];
   newsFeeds?: { name: string; url: string }[];
 }
@@ -74,7 +82,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               role: isBootstrapOwner ? 'owner' : 'user',
               permissions: isBootstrapOwner 
                 ? ['dashboard.view', 'projects.view', 'projects.edit', 'code.view', 'code.edit', 'logs.view', 'users.manage'] 
-                : ['dashboard.view', 'code.view', 'code.edit']
+                : ['dashboard.view', 'code.view', 'code.edit'],
+              theme: 'dark',
+              accentColor: 'blue',
+              notifications: {
+                system: true,
+                trading: true,
+                security: true,
+                email: false
+              }
             };
             await setDoc(userRef, newProfile);
           } else {

@@ -38,6 +38,7 @@ export function SettingsView() {
   const [users, setUsers] = useState<SystemUser[]>([]);
   const [displayName, setDisplayName] = useState(profile?.displayName || '');
   const [isSaving, setIsSaving] = useState(false);
+  const [showSaved, setShowSaved] = useState(false);
 
   // Appearance States
   const [theme, setTheme] = useState<'dark' | 'light' | 'system'>('dark');
@@ -53,13 +54,16 @@ export function SettingsView() {
 
   useEffect(() => {
     if (profile?.displayName) setDisplayName(profile.displayName);
+    if (profile?.theme) setTheme(profile.theme);
+    if (profile?.accentColor) setAccentColor(profile.accentColor);
+    if (profile?.notifications) setNotifications(profile.notifications);
   }, [profile]);
 
   useEffect(() => {
     const q = query(collection(db, 'users'));
     const path = 'users';
     return onSnapshot(q, (snapshot) => {
-      const docs = snapshot.docs.map(doc => doc.data() as SystemUser);
+      const docs = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as SystemUser));
       setUsers(docs);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, path);
@@ -71,8 +75,14 @@ export function SettingsView() {
     setIsSaving(true);
     try {
       const userRef = doc(db, 'users', profile.uid);
-      await updateDoc(userRef, { displayName });
-      // Logic for updating locally or waiting for snapshot is handled in AuthContext usually
+      await updateDoc(userRef, { 
+        displayName,
+        theme,
+        accentColor,
+        notifications
+      });
+      setShowSaved(true);
+      setTimeout(() => setShowSaved(false), 2000);
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `users/${profile.uid}`);
     } finally {
@@ -127,8 +137,7 @@ export function SettingsView() {
           <h2 className="text-3xl font-black text-white tracking-tighter uppercase">System-Einstellungen</h2>
           <p className="text-slate-500 text-sm mt-1">Konfiguriere dein persönliches Erlebnis und verwalte Systemressourcen.</p>
         </div>
-        
-        {/* Tab Navigation */}
+             {/* Tab Navigation */}
         <div className="p-1 bg-[#11111a] border border-white/5 rounded-2xl flex gap-1 self-start">
           {tabs.map(tab => (
             <button
@@ -155,7 +164,7 @@ export function SettingsView() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.2 }}
-          className="min-h-[400px]"
+          className="min-h-[400px] flex flex-col gap-6"
         >
           {activeTab === 'profile' && (
             <div className="max-w-2xl space-y-6">
@@ -199,17 +208,6 @@ export function SettingsView() {
                       className="bg-white/2 border border-white/10 rounded-xl px-4 py-3 text-slate-500 text-sm cursor-not-allowed opacity-50"
                     />
                   </div>
-                </div>
-
-                <div className="flex justify-end pt-4">
-                  <button 
-                    disabled={isSaving}
-                    onClick={handleUpdateProfile}
-                    className="flex items-center gap-2 px-6 py-3 bg-white text-black font-black uppercase tracking-widest text-xs rounded-xl hover:bg-blue-500 hover:text-white transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    {isSaving ? <div className="w-3 h-3 border-2 border-current border-t-transparent animate-spin rounded-full" /> : <Save className="w-3.5 h-3.5" />}
-                    Einstellungen speichern
-                  </button>
                 </div>
               </div>
             </div>
@@ -377,6 +375,34 @@ export function SettingsView() {
                   </table>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Bottom Save Action - Only for non-team tabs */}
+          {activeTab !== 'team' && (
+            <div className="flex justify-start">
+              <button
+                onClick={handleUpdateProfile}
+                disabled={isSaving}
+                className={`flex items-center gap-2 px-8 py-4 font-black uppercase tracking-widest text-xs rounded-2xl transition-all active:scale-95 disabled:opacity-50 shadow-2xl relative overflow-hidden group ${
+                  showSaved 
+                    ? 'bg-emerald-500 text-white' 
+                    : isSaving 
+                      ? 'bg-slate-800 text-slate-400' 
+                      : 'bg-white text-black hover:bg-emerald-500 hover:text-white'
+                }`}
+              >
+                <div className="relative z-10 flex items-center gap-2">
+                  {showSaved ? (
+                    <CheckCircle className="w-4 h-4" />
+                  ) : isSaving ? (
+                    <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent animate-spin rounded-full" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  <span>{showSaved ? 'Gespeichert!' : 'Einstellungen übernehmen'}</span>
+                </div>
+              </button>
             </div>
           )}
         </motion.div>

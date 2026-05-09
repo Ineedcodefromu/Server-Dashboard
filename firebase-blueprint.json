@@ -2,14 +2,25 @@
   "entities": {
     "User": {
       "title": "User",
-      "description": "User profile and role association",
+      "description": "User profile with role, preferences and association",
       "type": "object",
       "properties": {
         "uid": { "type": "string" },
         "email": { "type": "string" },
         "displayName": { "type": "string" },
-        "role": { "type": "string", "enum": ["admin", "user"] },
+        "role": { "type": "string", "enum": ["owner", "admin", "user"] },
         "permissions": { "type": "array", "items": { "type": "string" } },
+        "theme": { "type": "string", "enum": ["light", "dark", "system"], "default": "dark" },
+        "accentColor": { "type": "string", "enum": ["blue", "purple", "emerald", "amber", "rose", "indigo"], "default": "blue" },
+        "notifications": {
+          "type": "object",
+          "properties": {
+            "system": { "type": "boolean" },
+            "trading": { "type": "boolean" },
+            "security": { "type": "boolean" },
+            "email": { "type": "boolean" }
+          }
+        },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email", "role"]

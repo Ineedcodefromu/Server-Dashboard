@@ -25,6 +25,43 @@ import axios from 'axios';
 
 // --- Components ---
 
+function ThemeManager() {
+  const { profile } = useAuth();
+
+  useEffect(() => {
+    if (!profile) return;
+
+    // Theme logic
+    const theme = profile.theme || 'dark';
+    const root = window.document.documentElement;
+    
+    if (theme === 'system') {
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      root.classList.remove('light', 'dark');
+      root.classList.add(systemTheme);
+    } else {
+      root.classList.remove('light', 'dark');
+      root.classList.add(theme);
+    }
+
+    // Accent logic
+    const colors: Record<string, string> = {
+      blue: '59, 130, 246',
+      purple: '147, 51, 234',
+      emerald: '16, 185, 129',
+      amber: '245, 158, 11',
+      rose: '244, 63, 94',
+      indigo: '79, 70, 229'
+    };
+
+    const accentRgb = colors[profile.accentColor || 'blue'];
+    root.style.setProperty('--accent-rgb', accentRgb);
+
+  }, [profile]);
+
+  return null;
+}
+
 function ProfileMenu() {
   const { profile, effectiveRole, setImpersonatedRole } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
@@ -482,6 +519,7 @@ export default function App() {
   
   return (
     <AuthProvider>
+      <ThemeManager />
       <AppContent activeTab={activeTab} setActiveTab={setActiveTab} />
     </AuthProvider>
   );

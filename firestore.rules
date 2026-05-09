@@ -62,7 +62,7 @@ service cloud.firestore {
       allow list: if isAdmin();
       allow create: if isSignedIn() && isOwner(userId) && isValidUser(request.resource.data);
       allow update: if isSignedIn() && (
-        (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'watchlist', 'newsFeeds', 'permissions'])) ||
+        (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'watchlist', 'newsFeeds', 'theme', 'accentColor', 'notifications'])) ||
         (isOwnerRole()) || // Super owner can update anyone
         (isAdmin() && resource.data.role != 'owner' && request.resource.data.role != 'owner') // Admin can't touch owners or promote to owner
       );
