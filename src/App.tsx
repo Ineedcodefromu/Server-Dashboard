@@ -9,14 +9,16 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   BarChart3, Code, FileText, Settings, LayoutDashboard, 
   TrendingUp, Newspaper, Briefcase, LogOut, Menu, X, 
-  Terminal, User as UserIcon, Shield, ShieldAlert, ChevronRight
+  Terminal, User as UserIcon, Shield, ShieldAlert, ChevronRight, Columns
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './lib/AuthContext';
-import { auth } from './lib/firebase';
+import { auth, db } from './lib/firebase';
 import { signOut, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { StocksView } from './components/StocksView';
 import { NewsView } from './components/NewsView';
 import { ProjectsView } from './components/ProjectsView';
+import { KanbanView } from './components/KanbanView';
 import { CodeView } from './components/CodeView';
 import { SettingsView } from './components/SettingsView';
 import { PerformanceView } from './components/PerformanceView';
@@ -203,6 +205,7 @@ function Sidebar({ activeTab, setActiveTab }: { activeTab: string, setActiveTab:
   
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'kanban', label: 'Kanban', icon: Columns, permission: 'projects.view' },
     { id: 'projects', label: 'Projekte', icon: Briefcase, permission: 'projects.view' },
     { id: 'code', label: 'Code', icon: Code, permission: 'code.view' },
     { id: 'performance', label: 'Leistung', icon: BarChart3, permission: 'dashboard.view' },
@@ -284,6 +287,7 @@ function StatCard({ label, value, icon: Icon, trend }: { label: string, value: s
 function DashboardOverview() {
   const { profile } = useAuth();
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
+  const [taskCount, setTaskCount] = useState(0);
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -294,6 +298,20 @@ function DashboardOverview() {
         console.error('Dashboard logs fetch failed', error);
       }
     };
+    
+    if (auth.currentUser) {
+      const q = query(
+        collection(db, 'tasks'),
+        where('userId', '==', auth.currentUser.uid),
+        where('status', '!=', 'done')
+      );
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        setTaskCount(snapshot.size);
+      });
+      fetchLogs();
+      return () => unsubscribe();
+    }
+    
     fetchLogs();
   }, []);
 
@@ -306,7 +324,7 @@ function DashboardOverview() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard label="Projekte" value="12" icon={Briefcase} trend="+2" />
-        <StatCard label="Code Snippets" value="84" icon={Code} trend="+12" />
+        <StatCard label="Offene Aufgaben" value={taskCount.toString()} icon={Columns} />
         <StatCard label="Markt" value="+4.2%" icon={TrendingUp} trend="+1.2%" />
         <StatCard label="System Logs" value={recentLogs.length.toString()} icon={Terminal} />
       </div>
@@ -486,6 +504,7 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
             transition={{ duration: 0.3 }}
           >
             {activeTab === 'dashboard' && <DashboardOverview />}
+            {activeTab === 'kanban' && <KanbanView />}
             {activeTab === 'projects' && <ProjectsView />}
             {activeTab === 'code' && <CodeView />}
             {activeTab === 'performance' && <PerformanceView />}

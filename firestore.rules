@@ -55,6 +55,12 @@ service cloud.firestore {
       return data.title is string && data.title.size() > 0 && data.title.size() <= 200;
     }
 
+    function isValidTask(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() <= 200
+        && data.status in ['todo', 'in-progress', 'done']
+        && (data.userId == request.auth.uid);
+    }
+
     // --- Rules ---
 
     match /users/{userId} {
@@ -87,6 +93,13 @@ service cloud.firestore {
 
     match /watchlists/{userId} {
       allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /tasks/{taskId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidTask(request.resource.data);
+      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidTask(request.resource.data);
+      allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
     }
   }
 }

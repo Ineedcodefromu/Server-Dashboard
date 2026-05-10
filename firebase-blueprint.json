@@ -63,6 +63,21 @@
         "severity": { "type": "string", "enum": ["info", "warning", "error"] }
       }
     },
+    "Task": {
+      "title": "Kanban Task",
+      "description": "Task for kanban board",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["todo", "in-progress", "done"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "status"]
+    },
     "StockWatchlist": {
       "title": "Stock Watchlist",
       "description": "User specific stock tracking",
@@ -89,6 +104,10 @@
     "/logs/{logId}": {
       "schema": "Log",
       "description": "Global system logs"
+    },
+    "/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "User specific kanban tasks"
     },
     "/watchlists/{userId}": {
       "schema": "StockWatchlist",
