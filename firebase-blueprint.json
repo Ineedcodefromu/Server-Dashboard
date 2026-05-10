@@ -78,6 +78,31 @@
       },
       "required": ["userId", "title", "status"]
     },
+    "ChatSession": {
+      "title": "Chat Session",
+      "description": "Metadata for an AI chat session",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title"]
+    },
+    "ChatMessage": {
+      "title": "Chat Message",
+      "description": "Individual message in a chat session",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "model"] },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "sessionId", "role", "content"]
+    },
     "StockWatchlist": {
       "title": "Stock Watchlist",
       "description": "User specific stock tracking",
@@ -108,6 +133,14 @@
     "/tasks/{taskId}": {
       "schema": "Task",
       "description": "User specific kanban tasks"
+    },
+    "/chat_sessions/{sessionId}": {
+      "schema": "ChatSession",
+      "description": "User chat sessions"
+    },
+    "/chat_messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Individual messages in a chat"
     },
     "/watchlists/{userId}": {
       "schema": "StockWatchlist",

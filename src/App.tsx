@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   BarChart3, Code, FileText, Settings, LayoutDashboard, 
   TrendingUp, Newspaper, Briefcase, LogOut, Menu, X, 
-  Terminal, User as UserIcon, Shield, ShieldAlert, ChevronRight, Columns
+  Terminal, User as UserIcon, Shield, ShieldAlert, ChevronRight, Columns, Sparkles
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import { auth, db } from './lib/firebase';
@@ -19,6 +19,7 @@ import { StocksView } from './components/StocksView';
 import { NewsView } from './components/NewsView';
 import { ProjectsView } from './components/ProjectsView';
 import { KanbanView } from './components/KanbanView';
+import { AIAssistantView } from './components/AIAssistantView';
 import { CodeView } from './components/CodeView';
 import { SettingsView } from './components/SettingsView';
 import { PerformanceView } from './components/PerformanceView';
@@ -205,6 +206,7 @@ function Sidebar({ activeTab, setActiveTab }: { activeTab: string, setActiveTab:
   
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'ai', label: 'AI Assistent', icon: Sparkles },
     { id: 'kanban', label: 'Kanban', icon: Columns, permission: 'projects.view' },
     { id: 'projects', label: 'Projekte', icon: Briefcase, permission: 'projects.view' },
     { id: 'code', label: 'Code', icon: Code, permission: 'code.view' },
@@ -504,6 +506,7 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
             transition={{ duration: 0.3 }}
           >
             {activeTab === 'dashboard' && <DashboardOverview />}
+            {activeTab === 'ai' && <AIAssistantView />}
             {activeTab === 'kanban' && <KanbanView />}
             {activeTab === 'projects' && <ProjectsView />}
             {activeTab === 'code' && <CodeView />}

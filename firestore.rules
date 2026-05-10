@@ -61,6 +61,17 @@ service cloud.firestore {
         && (data.userId == request.auth.uid);
     }
 
+    function isValidChatSession(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() <= 500
+        && (data.userId == request.auth.uid);
+    }
+
+    function isValidChatMessage(data) {
+      return data.role in ['user', 'model']
+        && data.content is string && data.content.size() > 0 && data.content.size() <= 10000
+        && (data.userId == request.auth.uid);
+    }
+
     // --- Rules ---
 
     match /users/{userId} {
@@ -100,6 +111,17 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidTask(request.resource.data);
       allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidTask(request.resource.data);
       allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /chat_sessions/{sessionId} {
+      allow read, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidChatSession(request.resource.data);
+      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidChatSession(request.resource.data);
+    }
+
+    match /chat_messages/{messageId} {
+      allow read, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidChatMessage(request.resource.data);
     }
   }
 }
