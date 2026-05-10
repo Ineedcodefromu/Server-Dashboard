@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, MoreVertical, Trash2, Calendar, 
   AlertCircle, CheckCircle2, Circle, Clock,
-  ChevronRight, GripVertical
+  ChevronRight, GripVertical, FileText
 } from 'lucide-react';
 import { 
   collection, query, where, onSnapshot, addDoc, 
@@ -57,6 +57,7 @@ interface Task {
   status: TaskStatus;
   priority: TaskPriority;
   userId: string;
+  checklist?: { text: string; completed: boolean }[];
   createdAt: any;
   updatedAt: any;
 }
@@ -70,9 +71,24 @@ const COLUMNS: { id: TaskStatus; label: string; icon: any; color: string }[] = [
 export function KanbanView() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isAdding, setIsAdding] = useState<TaskStatus | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskPriority, setNewTaskPriority] = useState<TaskPriority>('medium');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // For Task Detail Editing
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editChecklist, setEditChecklist] = useState<{ text: string; completed: boolean }[]>([]);
+  const [newCheckItem, setNewCheckItem] = useState('');
+
+  useEffect(() => {
+    if (selectedTask) {
+      setEditTitle(selectedTask.title);
+      setEditDesc(selectedTask.description || '');
+      setEditChecklist(selectedTask.checklist || []);
+    }
+  }, [selectedTask]);
 
   useEffect(() => {
     if (!auth.currentUser) return;
@@ -139,6 +155,39 @@ export function KanbanView() {
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, path);
     }
+  };
+
+  const handleUpdateTask = async () => {
+    if (!selectedTask || !auth.currentUser) return;
+
+    const path = `tasks/${selectedTask.id}`;
+    try {
+      await updateDoc(doc(db, 'tasks', selectedTask.id), {
+        title: editTitle.trim(),
+        description: editDesc.trim(),
+        checklist: editChecklist,
+        updatedAt: serverTimestamp(),
+      });
+      setSelectedTask(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, path);
+    }
+  };
+
+  const addCheckItem = () => {
+    if (!newCheckItem.trim()) return;
+    setEditChecklist([...editChecklist, { text: newCheckItem.trim(), completed: false }]);
+    setNewCheckItem('');
+  };
+
+  const toggleCheckItem = (index: number) => {
+    const newList = [...editChecklist];
+    newList[index].completed = !newList[index].completed;
+    setEditChecklist(newList);
+  };
+
+  const removeCheckItem = (index: number) => {
+    setEditChecklist(editChecklist.filter((_, i) => i !== index));
   };
 
   const getPriorityColor = (priority: TaskPriority) => {
@@ -254,9 +303,27 @@ export function KanbanView() {
                         </div>
                       </div>
                       
-                      <h4 className="text-sm font-bold text-text-primary mb-4 line-clamp-2 leading-relaxed tracking-tight group-hover:text-accent transition-colors">
-                        {task.title}
-                      </h4>
+                      <div 
+                        onClick={() => setSelectedTask(task)}
+                        className="cursor-pointer"
+                      >
+                        <h4 className="text-sm font-bold text-text-primary mb-2 line-clamp-2 leading-relaxed tracking-tight group-hover:text-accent transition-colors">
+                          {task.title}
+                        </h4>
+                        {task.checklist && task.checklist.length > 0 && (
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="flex-1 h-1.5 bg-input-bg rounded-full overflow-hidden border border-border-subtle">
+                               <div 
+                                className="h-full bg-accent transition-all duration-500" 
+                                style={{ width: `${(task.checklist.filter(i => i.completed).length / task.checklist.length) * 100}%` }}
+                               />
+                            </div>
+                            <span className="text-[10px] font-bold text-text-secondary">
+                              {task.checklist.filter(i => i.completed).length}/{task.checklist.length}
+                            </span>
+                          </div>
+                        )}
+                      </div>
 
                       <div className="flex items-center justify-between pt-3 border-t border-border-subtle">
                         <div className="flex items-center gap-1.5 text-[10px] text-text-secondary font-medium">
@@ -290,6 +357,125 @@ export function KanbanView() {
           </div>
         ))}
       </div>
+
+      <AnimatePresence>
+        {selectedTask && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedTask(null)}
+              className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
+            />
+            <motion.div
+              layoutId={selectedTask.id}
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-2xl glass-card rounded-[2.5rem] overflow-hidden flex flex-col max-h-[90vh] shadow-2xl border-accent/20"
+            >
+              <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar">
+                <div className="flex justify-between items-start">
+                  <div className={`px-3 py-1 rounded text-[10px] font-black uppercase tracking-[0.2em] border ${getPriorityColor(selectedTask.priority)}`}>
+                    {selectedTask.priority} Priority
+                  </div>
+                  <button 
+                    onClick={() => setSelectedTask(null)}
+                    className="p-2 hover:bg-input-bg rounded-xl text-text-secondary transition-colors"
+                  >
+                    <Plus className="w-6 h-6 rotate-45" />
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  <input 
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="text-3xl font-bold bg-transparent border-none outline-none text-text-primary w-full tracking-tight focus:text-accent transition-colors"
+                    placeholder="Aufgabentitel"
+                  />
+                  
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-text-secondary flex items-center gap-2">
+                      <FileText className="w-3 h-3" /> Beschreibung
+                    </label>
+                    <textarea 
+                      value={editDesc}
+                      onChange={(e) => setEditDesc(e.target.value)}
+                      className="w-full h-32 bg-input-bg/50 border border-border-subtle rounded-3xl p-4 text-sm text-text-primary focus:border-accent/40 outline-none transition-all resize-none leading-relaxed"
+                      placeholder="Füge eine detaillierte Beschreibung hinzu..."
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-text-secondary flex items-center gap-2">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Checkliste
+                    </label>
+                    
+                    <div className="space-y-2">
+                      {editChecklist.map((item, idx) => (
+                        <div key={idx} className="flex items-center gap-3 group">
+                          <button 
+                            onClick={() => toggleCheckItem(idx)}
+                            className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${
+                              item.completed ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-border-subtle hover:border-accent/50'
+                            }`}
+                          >
+                            {item.completed && <CheckCircle2 className="w-3 px-0.5" />}
+                          </button>
+                          <span className={`text-sm flex-1 ${item.completed ? 'text-text-secondary line-through' : 'text-text-primary'}`}>
+                            {item.text}
+                          </span>
+                          <button 
+                            onClick={() => removeCheckItem(idx)}
+                            className="p-1 opacity-0 group-hover:opacity-100 text-text-secondary hover:text-red-500 transition-all"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <input 
+                        type="text"
+                        value={newCheckItem}
+                        onChange={(e) => setNewCheckItem(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && addCheckItem()}
+                        className="flex-1 bg-input-bg border border-border-subtle rounded-xl px-4 py-2 text-sm text-text-primary outline-none focus:border-accent/30 transition-all"
+                        placeholder="Neuer Punkt..."
+                      />
+                      <button 
+                        onClick={addCheckItem}
+                        className="px-4 py-2 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-xl hover:bg-emerald-500/20 transition-all"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-6 border-t border-border-subtle">
+                  <button 
+                    onClick={handleUpdateTask}
+                    className="flex-1 py-4 bg-accent text-white rounded-3xl font-bold uppercase tracking-widest text-xs shadow-xl shadow-accent/20 hover:scale-[1.02] active:scale-95 transition-all"
+                  >
+                    Änderungen speichern
+                  </button>
+                  <button 
+                    onClick={() => setSelectedTask(null)}
+                    className="px-8 py-4 bg-input-bg text-text-secondary border border-border-subtle rounded-3xl font-bold uppercase tracking-widest text-xs hover:bg-slate-800 transition-all"
+                  >
+                    Schließen
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

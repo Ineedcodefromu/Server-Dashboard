@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User as FirebaseUser, onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc, getDocFromServer, updateDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, getDocFromServer, updateDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { handleFirestoreError, OperationType } from './firestoreErrorHandler';
 
@@ -20,6 +20,8 @@ interface UserProfile {
   };
   watchlist?: string[];
   newsFeeds?: { name: string; url: string }[];
+  lastActive?: any;
+  dashboardLayout?: string[];
 }
 
 interface AuthContextType {
@@ -48,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let unsubscribeProfile: (() => void) | null = null;
+    let heartbeat: any;
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (authUser) => {
       setUser(authUser);
@@ -57,8 +60,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         unsubscribeProfile = null;
       }
 
+      if (heartbeat) {
+        clearInterval(heartbeat);
+      }
+
       if (authUser) {
         const userRef = doc(db, 'users', authUser.uid);
+        
+        // Presence heartbeat
+        const updatePresence = async () => {
+          try {
+            await updateDoc(userRef, { lastActive: serverTimestamp() });
+          } catch (e) {
+            console.error("Presence error:", e);
+          }
+        };
+        updatePresence();
+        heartbeat = setInterval(updatePresence, 30000); // every 30s
         
         // Setup Real-time listener
         unsubscribeProfile = onSnapshot(userRef, (snapshot) => {
@@ -115,6 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       unsubscribeAuth();
       if (unsubscribeProfile) unsubscribeProfile();
+      if (heartbeat) clearInterval(heartbeat);
     };
   }, []);
 

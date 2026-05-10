@@ -61,6 +61,17 @@ service cloud.firestore {
         && (data.userId == request.auth.uid);
     }
 
+    function isValidNotification(data) {
+      return data.title is string && data.title.size() > 0
+        && data.userId == request.auth.uid
+        && data.read is bool;
+    }
+
+    function isValidDocument(data) {
+      return data.name is string && data.name.size() > 0
+        && data.userId == request.auth.uid;
+    }
+
     function isValidChatSession(data) {
       return data.title is string && data.title.size() > 0 && data.title.size() <= 500
         && (data.userId == request.auth.uid);
@@ -79,11 +90,29 @@ service cloud.firestore {
       allow list: if isAdmin();
       allow create: if isSignedIn() && isOwner(userId) && isValidUser(request.resource.data);
       allow update: if isSignedIn() && (
-        (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'watchlist', 'newsFeeds', 'theme', 'accentColor', 'notifications'])) ||
+        (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'watchlist', 'newsFeeds', 'theme', 'accentColor', 'notifications', 'lastActive', 'dashboardLayout'])) ||
         (isOwnerRole()) || // Super owner can update anyone
         (isAdmin() && resource.data.role != 'owner' && request.resource.data.role != 'owner') // Admin can't touch owners or promote to owner
       );
       allow delete: if isOwnerRole(); // Only owner can delete users
+    }
+
+    match /global_messages/{messageId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidGlobalMessage(request.resource.data);
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    match /budgets/{budgetId} {
+      allow read, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidBudget(request.resource.data);
+      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidBudget(request.resource.data);
+    }
+
+    match /expenses/{expenseId} {
+      allow read, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidExpense(request.resource.data);
+      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidExpense(request.resource.data);
     }
 
     match /projects/{projectId} {
@@ -111,6 +140,17 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidTask(request.resource.data);
       allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidTask(request.resource.data);
       allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /notifications/{notificationId} {
+      allow read, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidNotification(request.resource.data);
+      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidNotification(request.resource.data);
+    }
+
+    match /documents/{documentId} {
+      allow read, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidDocument(request.resource.data);
     }
 
     match /chat_sessions/{sessionId} {

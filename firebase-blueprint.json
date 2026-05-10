@@ -73,10 +73,48 @@
         "description": { "type": "string" },
         "status": { "type": "string", "enum": ["todo", "in-progress", "done"] },
         "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "checklist": { 
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text": { "type": "string" },
+              "completed": { "type": "boolean" }
+            }
+          }
+        },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "title", "status"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "System notification for user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["info", "success", "warning", "error"] },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "message", "read"]
+    },
+    "Document": {
+      "title": "Document",
+      "description": "Stored document metadata",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "size": { "type": "number" },
+        "type": { "type": "string" },
+        "category": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "type"]
     },
     "ChatSession": {
       "title": "Chat Session",
@@ -97,11 +135,52 @@
       "properties": {
         "userId": { "type": "string" },
         "sessionId": { "type": "string" },
-        "role": { "type": "string", "enum": ["user", "model"] },
+        "role": { "type": "string", "enum": ["user", "model", "system"] },
         "content": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "sessionId", "role", "content"]
+    },
+    "GlobalMessage": {
+      "title": "Global Message",
+      "description": "Messages in the team chat",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userAvatar": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userName", "content"]
+    },
+    "Budget": {
+      "title": "Budget",
+      "description": "Project or category budget",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "amount": { "type": "number" },
+        "spent": { "type": "number" },
+        "currency": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "amount"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Individual project expense",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "budgetId": { "type": "string" },
+        "title": { "type": "string" },
+        "amount": { "type": "number" },
+        "date": { "type": "string", "format": "date-time" },
+        "category": { "type": "string" }
+      },
+      "required": ["userId", "budgetId", "title", "amount"]
     },
     "StockWatchlist": {
       "title": "Stock Watchlist",
@@ -134,6 +213,14 @@
       "schema": "Task",
       "description": "User specific kanban tasks"
     },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications"
+    },
+    "/documents/{documentId}": {
+      "schema": "Document",
+      "description": "User documents"
+    },
     "/chat_sessions/{sessionId}": {
       "schema": "ChatSession",
       "description": "User chat sessions"
@@ -141,6 +228,18 @@
     "/chat_messages/{messageId}": {
       "schema": "ChatMessage",
       "description": "Individual messages in a chat"
+    },
+    "/global_messages/{messageId}": {
+      "schema": "GlobalMessage",
+      "description": "Messages in the team-wide chat"
+    },
+    "/budgets/{budgetId}": {
+      "schema": "Budget",
+      "description": "Project budgets"
+    },
+    "/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Project expenses"
     },
     "/watchlists/{userId}": {
       "schema": "StockWatchlist",

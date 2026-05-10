@@ -9,17 +9,24 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   BarChart3, Code, FileText, Settings, LayoutDashboard, 
   TrendingUp, Newspaper, Briefcase, LogOut, Menu, X, 
-  Terminal, User as UserIcon, Shield, ShieldAlert, ChevronRight, Columns, Sparkles
+  Terminal, User as UserIcon, Shield, ShieldAlert, ChevronRight, Columns, Sparkles,
+  Bell, FileBox, MessageSquare, Wallet, LayoutGrid
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import { auth, db } from './lib/firebase';
 import { signOut, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { PresenceChatView } from './components/PresenceChatView';
+import { BudgetTrackerView } from './components/BudgetTrackerView';
+import { CustomDashboard } from './components/CustomDashboard';
+import { DashboardOverview } from './components/DashboardOverview';
 import { StocksView } from './components/StocksView';
 import { NewsView } from './components/NewsView';
 import { ProjectsView } from './components/ProjectsView';
 import { KanbanView } from './components/KanbanView';
 import { AIAssistantView } from './components/AIAssistantView';
+import { NotificationsView } from './components/NotificationsView';
+import { DocumentsView } from './components/DocumentsView';
 import { CodeView } from './components/CodeView';
 import { SettingsView } from './components/SettingsView';
 import { PerformanceView } from './components/PerformanceView';
@@ -206,8 +213,13 @@ function Sidebar({ activeTab, setActiveTab }: { activeTab: string, setActiveTab:
   
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'custom', label: 'Mein Space', icon: LayoutGrid },
+    { id: 'chat', label: 'Team Chat', icon: MessageSquare },
+    { id: 'budget', label: 'Finanzen', icon: Wallet },
     { id: 'ai', label: 'AI Assistent', icon: Sparkles },
     { id: 'kanban', label: 'Kanban', icon: Columns, permission: 'projects.view' },
+    { id: 'documents', label: 'Dokumente', icon: FileBox },
+    { id: 'notifications', label: 'Alerts', icon: Bell },
     { id: 'projects', label: 'Projekte', icon: Briefcase, permission: 'projects.view' },
     { id: 'code', label: 'Code', icon: Code, permission: 'code.view' },
     { id: 'performance', label: 'Leistung', icon: BarChart3, permission: 'dashboard.view' },
@@ -262,145 +274,7 @@ function Sidebar({ activeTab, setActiveTab }: { activeTab: string, setActiveTab:
   );
 }
 
-function StatCard({ label, value, icon: Icon, trend }: { label: string, value: string, icon: any, trend?: string }) {
-  return (
-    <div className="bg-[#11111a]/60 rounded-2xl border border-white/5 p-6 flex flex-col justify-between hover:border-accent/30 hover:scale-[1.02] transition-all group cursor-pointer">
-      <div className="flex justify-between items-start mb-4">
-        <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
-          <Icon className="w-6 h-6" />
-        </div>
-        <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">{label}</span>
-      </div>
-      <div>
-        <div className="text-3xl font-bold text-white mb-1">{value}</div>
-        {trend && (
-          <div className="text-xs text-slate-400 flex items-center gap-2">
-            <span className={trend.startsWith('+') ? 'text-blue-400' : 'text-red-400'}>{trend}</span>
-            <span className="text-slate-600">• Trend</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // --- Page Views ---
-
-function DashboardOverview() {
-  const { profile } = useAuth();
-  const [recentLogs, setRecentLogs] = useState<any[]>([]);
-  const [taskCount, setTaskCount] = useState(0);
-
-  useEffect(() => {
-    const fetchLogs = async () => {
-      try {
-        const response = await axios.get('/api/system-logs');
-        setRecentLogs(response.data.slice(0, 5));
-      } catch (error) {
-        console.error('Dashboard logs fetch failed', error);
-      }
-    };
-    
-    if (auth.currentUser) {
-      const q = query(
-        collection(db, 'tasks'),
-        where('userId', '==', auth.currentUser.uid),
-        where('status', '!=', 'done')
-      );
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        setTaskCount(snapshot.size);
-      });
-      fetchLogs();
-      return () => unsubscribe();
-    }
-    
-    fetchLogs();
-  }, []);
-
-  return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-3xl font-bold text-white tracking-tight">Willkommen zurück, {profile?.displayName?.split(' ')[0] || 'User'}</h2>
-        <p className="text-slate-500 text-sm">Dashboard Status: <span className="text-green-500 font-medium">System Online</span> • Alle Module bereit.</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard label="Projekte" value="12" icon={Briefcase} trend="+2" />
-        <StatCard label="Offene Aufgaben" value={taskCount.toString()} icon={Columns} />
-        <StatCard label="Markt" value="+4.2%" icon={TrendingUp} trend="+1.2%" />
-        <StatCard label="System Logs" value={recentLogs.length.toString()} icon={Terminal} />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-12 xl:col-span-7 bg-[#11111a]/60 rounded-2xl border border-white/5 overflow-hidden flex flex-col">
-          <div className="p-6 border-b border-white/5 bg-white/2 flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
-              <span className="w-2 h-2 bg-accent rounded-full animate-pulse"></span> Projektstatus
-            </h3>
-          </div>
-          <div className="p-8 space-y-8">
-            {[
-              { name: 'OmniDash Platform', status: 'Aktiv', progress: 85, color: 'bg-accent' },
-              { name: 'Mobile App Redesign', status: 'Geplant', progress: 10, color: 'bg-slate-700' },
-              { name: 'API Integration', status: 'Testen', progress: 60, color: 'bg-indigo-500' },
-            ].map((p) => (
-              <div key={p.name} className="space-y-3">
-                <div className="flex justify-between items-end">
-                  <div>
-                    <span className="text-sm font-bold text-white">{p.name}</span>
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider">{p.status}</p>
-                  </div>
-                  <span className="text-xs font-mono text-slate-400">{p.progress}%</span>
-                </div>
-                <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${p.progress}%` }}
-                    className={`${p.color} h-full shadow-[0_0_10px_rgba(var(--accent-rgb),0.3)]`} 
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="lg:col-span-12 xl:col-span-5 bg-[#11111a]/60 rounded-2xl border border-white/5 flex flex-col">
-          <div className="p-6 border-b border-white/5 bg-white/2 flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2">
-              <Terminal className="w-4 h-4 text-slate-500" /> Letzte Aktivität
-            </h3>
-          </div>
-          <div className="p-6 space-y-6">
-            {recentLogs.length > 0 ? (
-              recentLogs.map((n) => (
-                <div key={n.id} className="flex items-center justify-between group">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-2 h-2 rounded-full ${
-                      n.type === 'error' ? 'bg-red-500' : 
-                      n.type === 'warning' ? 'bg-amber-500' : 'bg-accent'
-                    }`} />
-                    <div>
-                      <h4 className="text-sm font-bold text-white group-hover:text-accent transition-colors line-clamp-1">{n.message}</h4>
-                      <span className="text-[10px] text-slate-600 font-mono italic uppercase">{n.source}</span>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-mono text-slate-500 shrink-0 ml-4">
-                    {new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div className="flex flex-col items-center justify-center h-48 text-slate-700">
-                <Terminal className="w-8 h-8 mb-2 opacity-20" />
-                <p className="text-[10px] uppercase font-black">Keine Aktivität</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function SectionPlaceholder({ title, description }: { title: string, description: string }) {
   return (
@@ -506,8 +380,13 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
             transition={{ duration: 0.3 }}
           >
             {activeTab === 'dashboard' && <DashboardOverview />}
+            {activeTab === 'custom' && <CustomDashboard />}
+            {activeTab === 'chat' && <PresenceChatView />}
+            {activeTab === 'budget' && <BudgetTrackerView />}
             {activeTab === 'ai' && <AIAssistantView />}
             {activeTab === 'kanban' && <KanbanView />}
+            {activeTab === 'documents' && <DocumentsView />}
+            {activeTab === 'notifications' && <NotificationsView />}
             {activeTab === 'projects' && <ProjectsView />}
             {activeTab === 'code' && <CodeView />}
             {activeTab === 'performance' && <PerformanceView />}
