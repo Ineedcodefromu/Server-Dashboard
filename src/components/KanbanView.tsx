@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, MoreVertical, Trash2, Calendar, 
   AlertCircle, CheckCircle2, Circle, Clock,
-  ChevronRight, GripVertical, FileText
+  ChevronRight, GripVertical, FileText, ShieldAlert
 } from 'lucide-react';
 import { 
   collection, query, where, onSnapshot, addDoc, 
@@ -11,6 +11,7 @@ import {
   orderBy 
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
+import { useAuth } from '../lib/AuthContext';
 
 enum OperationType {
   CREATE = 'create',
@@ -69,12 +70,15 @@ const COLUMNS: { id: TaskStatus; label: string; icon: any; color: string }[] = [
 ];
 
 export function KanbanView() {
+  const { effectiveRole } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isAdding, setIsAdding] = useState<TaskStatus | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskPriority, setNewTaskPriority] = useState<TaskPriority>('medium');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isPowerful = effectiveRole === 'owner' || effectiveRole === 'admin';
 
   // For Task Detail Editing
   const [editTitle, setEditTitle] = useState('');
@@ -91,12 +95,11 @@ export function KanbanView() {
   }, [selectedTask]);
 
   useEffect(() => {
-    if (!auth.currentUser) return;
+    if (!auth.currentUser || !isPowerful) return;
 
     const path = 'tasks';
     const q = query(
       collection(db, path),
-      where('userId', '==', auth.currentUser.uid),
       orderBy('createdAt', 'desc')
     );
 
@@ -111,7 +114,17 @@ export function KanbanView() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [isPowerful]);
+
+  if (!isPowerful) {
+    return (
+      <div className="flex flex-col items-center justify-center p-20 glass-card rounded-[2.5rem] border-rose-500/20 bg-rose-500/5 h-[60vh]">
+        <ShieldAlert className="w-16 h-16 text-rose-500 mb-6" />
+        <h3 className="text-2xl font-bold text-text-primary mb-2">Zugriff verweigert</h3>
+        <p className="text-text-secondary text-center max-w-md">Das Kanban-Board ist exklusiv für Administratoren und Besitzer reserviert.</p>
+      </div>
+    );
+  }
 
   const handleAddTask = async (status: TaskStatus) => {
     if (!newTaskTitle.trim() || !auth.currentUser) return;

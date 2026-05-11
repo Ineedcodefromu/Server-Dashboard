@@ -10,6 +10,7 @@ import {
   deleteDoc, doc, serverTimestamp, 
   orderBy, limit, Timestamp 
 } from 'firebase/firestore';
+import { handleFirestoreError, OperationType } from '../lib/firestoreErrorHandler';
 import { db, auth } from '../lib/firebase';
 import { useAuth } from '../lib/AuthContext';
 
@@ -39,7 +40,7 @@ interface Member {
 }
 
 export function PresenceChatView() {
-  const { profile } = useAuth();
+  const { profile, permissions, effectiveRole } = useAuth();
   const [messages, setMessages] = useState<(GlobalMessage | DirectMessage)[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [selectedContact, setSelectedContact] = useState<Member | null>(null);
@@ -47,15 +48,25 @@ export function PresenceChatView() {
   const [isSending, setIsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const isPowerful = effectiveRole === 'owner' || effectiveRole === 'admin';
+  const hasGlobalChat = true; // Allowed for everyone signed in
+  const hasDirectChat = true; // Allowed for everyone signed in
+
+  // Initialize selected contact if global chat is disabled but direct is enabled
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (!hasGlobalChat && hasDirectChat && !selectedContact && members.length > 0) {
+      const firstAvailable = members.find(m => m.uid !== auth.currentUser?.uid);
+      if (firstAvailable) setSelectedContact(firstAvailable);
     }
-  }, [messages]);
+  }, [hasGlobalChat, hasDirectChat, members]);
 
   // Fetch messages
   useEffect(() => {
+    if (!auth.currentUser) return;
+    
     let q;
+    const collectionName = !selectedContact ? 'global_messages' : 'direct_messages';
+    
     if (!selectedContact) {
       q = query(
         collection(db, 'global_messages'),
@@ -81,7 +92,13 @@ export function PresenceChatView() {
         );
       }
       
-      setMessages(msgData.reverse());
+      setMessages(msgData.sort((a, b) => {
+        const timeA = a.createdAt?.toMillis?.() || 0;
+        const timeB = b.createdAt?.toMillis?.() || 0;
+        return timeA - timeB;
+      }));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, collectionName);
     });
     return () => unsubscribe();
   }, [selectedContact]);
@@ -95,6 +112,8 @@ export function PresenceChatView() {
         ...doc.data() 
       })) as Member[];
       setMembers(membersData);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'users');
     });
     return () => unsubscribe();
   }, []);
@@ -147,6 +166,12 @@ export function PresenceChatView() {
   const onlineMembers = members.filter(m => isOnline(m.lastActive) && m.uid !== auth.currentUser?.uid);
   const offlineMembers = members.filter(m => !isOnline(m.lastActive) && m.uid !== auth.currentUser?.uid);
 
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
   return (
     <div className="flex h-[calc(100vh-12rem)] gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Sidebar - Members */}
@@ -161,46 +186,50 @@ export function PresenceChatView() {
 
           <div className="flex-1 overflow-y-auto custom-scrollbar space-y-6">
             {/* Global Chat Button */}
-            <button 
-              onClick={() => setSelectedContact(null)}
-              className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all ${
-                !selectedContact ? 'bg-accent/10 border border-accent/20' : 'hover:bg-white/5 border border-transparent'
-              }`}
-            >
-              <div className="w-10 h-10 rounded-2xl bg-accent/20 flex items-center justify-center text-accent">
-                <Hash className="w-5 h-5" />
-              </div>
-              <div className="text-left">
-                <p className="text-sm font-bold text-text-primary">Team Chat</p>
-                <p className="text-[8px] font-black uppercase tracking-widest text-text-secondary">Global</p>
-              </div>
-            </button>
+            {hasGlobalChat && (
+              <button 
+                onClick={() => setSelectedContact(null)}
+                className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all ${
+                  !selectedContact ? 'bg-accent/10 border border-accent/20' : 'hover:bg-white/5 border border-transparent'
+                }`}
+              >
+                <div className="w-10 h-10 rounded-2xl bg-accent/20 flex items-center justify-center text-accent">
+                  <Hash className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-bold text-text-primary">Team Chat</p>
+                  <p className="text-[8px] font-black uppercase tracking-widest text-text-secondary">Global</p>
+                </div>
+              </button>
+            )}
 
-            <div className="space-y-3">
-              <p className="text-[9px] font-black uppercase tracking-widest text-text-secondary/50">Mitglieder</p>
-              {[...onlineMembers, ...offlineMembers].map(member => (
-                <button 
-                  key={member.uid}
-                  onClick={() => setSelectedContact(member)}
-                  className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all ${
-                    selectedContact?.uid === member.uid ? 'bg-accent/10 border border-accent/20' : 'hover:bg-white/5 border border-transparent'
-                  }`}
-                >
-                  <div className="relative">
-                    <div className="w-10 h-10 rounded-2xl bg-input-bg border border-border-subtle flex items-center justify-center">
-                      <User className="w-5 h-5 text-text-secondary" />
+            {hasDirectChat && (
+              <div className="space-y-3">
+                <p className="text-[9px] font-black uppercase tracking-widest text-text-secondary/50">Mitglieder</p>
+                {[...onlineMembers, ...offlineMembers].map(member => (
+                  <button 
+                    key={member.uid}
+                    onClick={() => setSelectedContact(member)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all ${
+                      selectedContact?.uid === member.uid ? 'bg-accent/10 border border-accent/20' : 'hover:bg-white/5 border border-transparent'
+                    }`}
+                  >
+                    <div className="relative">
+                      <div className="w-10 h-10 rounded-2xl bg-input-bg border border-border-subtle flex items-center justify-center">
+                        <User className="w-5 h-5 text-text-secondary" />
+                      </div>
+                      {isOnline(member.lastActive) && (
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-slate-900 rounded-full" />
+                      )}
                     </div>
-                    {isOnline(member.lastActive) && (
-                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-slate-900 rounded-full" />
-                    )}
-                  </div>
-                  <div className="text-left flex-1 overflow-hidden">
-                    <p className="text-sm font-bold text-text-primary truncate">{member.displayName || 'Unbekannt'}</p>
-                    <p className="text-[8px] font-black uppercase tracking-widest text-text-secondary">{member.role}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
+                    <div className="text-left flex-1 overflow-hidden">
+                      <p className="text-sm font-bold text-text-primary truncate">{member.displayName || 'Unbekannt'}</p>
+                      <p className="text-[8px] font-black uppercase tracking-widest text-text-secondary">{member.role}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -36,6 +36,10 @@ interface UserGroup {
 
 const ALL_PERMISSIONS = [
   { id: 'dashboard.view', label: 'Dashboard ansehen', category: 'Allgemein' },
+  { id: 'chat.global', label: 'Team Chat nutzen', category: 'Allgemein' },
+  { id: 'chat.direct', label: 'Direktnachrichten nutzen', category: 'Allgemein' },
+  { id: 'budget.view', label: 'Finanzen einsehen', category: 'Allgemein' },
+  { id: 'ai.use', label: 'AI Assistent nutzen', category: 'Allgemein' },
   { id: 'projects.view', label: 'Projekte ansehen', category: 'Projekte' },
   { id: 'projects.edit', label: 'Projekte bearbeiten', category: 'Projekte' },
   { id: 'code.view', label: 'Code-Notizen ansehen', category: 'Entwicklung' },
@@ -66,6 +70,9 @@ export function UsersManagementView() {
   const [newGroupDesc, setNewGroupDesc] = useState('');
   const [loading, setLoading] = useState(true);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [deletePending, setDeletePending] = useState<{ id: string, type: 'user' | 'group', name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const initializeDefaultGroups = async () => {
     setIsInitializing(true);
@@ -87,7 +94,7 @@ export function UsersManagementView() {
         await addDoc(collection(db, 'user_groups'), {
           name: 'User',
           description: 'Standard-Benutzergruppe mit Basisberechtigungen.',
-          permissions: ['dashboard.view', 'projects.view', 'code.view'],
+          permissions: ['dashboard.view', 'chat.global', 'chat.direct', 'budget.view', 'ai.use', 'projects.view', 'code.view'],
           createdAt: serverTimestamp(),
           isSystem: true
         });
@@ -195,20 +202,28 @@ export function UsersManagementView() {
 
   const handleDeleteUser = async (uid: string) => {
     if (uid === auth.currentUser?.uid) {
-      alert('Du kannst dich nicht selbst löschen!');
+      setErrorMsg('Du kannst dich nicht selbst löschen!');
       return;
     }
     const user = users.find(u => u.uid === uid);
     if (user?.role === 'owner' && profile?.role !== 'owner') {
-      alert('Besitzer können nur von anderen Besitzern gelöscht werden.');
+      setErrorMsg('Besitzer können nur von anderen Besitzern gelöscht werden.');
       return;
     }
-    if (!confirm('Benutzer wirklich löschen? Dieser Vorgang kann nicht rückgängig gemacht werden.')) return;
     
+    setDeletePending({ id: uid, type: 'user', name: user?.displayName || user?.email || 'Unbekannter Benutzer' });
+  };
+
+  const confirmDeleteUser = async (uid: string) => {
+    setIsDeleting(true);
     try {
       await deleteDoc(doc(db, 'users', uid));
+      setDeletePending(null);
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `users/${uid}`);
+      console.error('Delete User Error:', error);
+      setErrorMsg('Fehler beim Löschen des Benutzers. Möglicherweise fehlende Berechtigungen.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -217,22 +232,29 @@ export function UsersManagementView() {
     if (!group) return;
 
     if (group.isSystem) {
-      alert('Systemgruppen können nicht gelöscht werden.');
+      setErrorMsg('Systemgruppen können nicht gelöscht werden.');
       return;
     }
 
     const membersInGroup = users.filter(u => u.groupId === groupId);
     if (membersInGroup.length > 0) {
-      alert(`Diese Gruppe kann nicht gelöscht werden, da sie noch ${membersInGroup.length} Mitglieder hat. Bitte weise die Benutzer erst einer anderen Gruppe zu.`);
+      setErrorMsg(`Die Gruppe "${group.name}" kann nicht gelöscht werden, da sie noch ${membersInGroup.length} Mitglieder hat.`);
       return;
     }
 
-    if (!confirm(`Gruppe "${group.name}" wirklich löschen?`)) return;
+    setDeletePending({ id: groupId, type: 'group', name: group.name });
+  };
 
+  const confirmDeleteGroup = async (groupId: string) => {
+    setIsDeleting(true);
     try {
       await deleteDoc(doc(db, 'user_groups', groupId));
+      setDeletePending(null);
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `user_groups/${groupId}`);
+      console.error('Delete Group Error:', error);
+      setErrorMsg('Fehler beim Löschen der Gruppe. Möglicherweise fehlende Berechtigungen.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -259,6 +281,85 @@ export function UsersManagementView() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
+      {/* Error Floating Banner */}
+      <AnimatePresence>
+        {errorMsg && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-8 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4"
+          >
+            <div className="bg-rose-500 text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 shrink-0" />
+                <p className="text-sm font-bold">{errorMsg}</p>
+              </div>
+              <button 
+                onClick={() => setErrorMsg(null)}
+                className="p-1 hover:bg-white/10 rounded-lg transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deletePending && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !isDeleting && setDeletePending(null)}
+              className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-sm glass-card rounded-[2rem] p-8 border-rose-500/20 text-center"
+            >
+              <div className="w-16 h-16 rounded-3xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 mx-auto mb-6">
+                <Trash2 className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-bold text-text-primary mb-2">
+                {deletePending.type === 'group' ? 'Gruppe löschen?' : 'Benutzer löschen?'}
+              </h3>
+              <p className="text-sm text-text-secondary mb-2">"{deletePending.name}"</p>
+              <p className="text-[10px] uppercase tracking-widest font-black text-rose-500/70 mb-8">Dieser Vorgang kann nicht rückgängig gemacht werden.</p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setDeletePending(null)}
+                  disabled={isDeleting}
+                  className="flex-1 px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest text-text-secondary hover:bg-white/5 transition-all disabled:opacity-50"
+                >
+                  Abbrechen
+                </button>
+                <button 
+                  onClick={() => {
+                    if (deletePending.type === 'group') {
+                      confirmDeleteGroup(deletePending.id);
+                    } else {
+                      confirmDeleteUser(deletePending.id);
+                    }
+                  }}
+                  disabled={isDeleting}
+                  className="flex-1 px-6 py-3 bg-rose-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-rose-500/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isDeleting ? (
+                    <Clock className="w-4 h-4 animate-spin" />
+                  ) : 'Löschen'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold text-text-primary tracking-tight">Benutzerverwaltung</h2>

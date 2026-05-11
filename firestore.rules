@@ -79,7 +79,7 @@ service cloud.firestore {
     function isValidTask(data) {
       return data.get('title', '') is string && data.get('title', '').size() > 0 && data.get('title', '').size() <= 200
         && data.get('status', 'todo') in ['todo', 'in-progress', 'done']
-        && (data.get('userId', '') == request.auth.uid);
+        && data.get('userId', '') is string;
     }
 
     function isValidNotification(data) {
@@ -158,15 +158,15 @@ service cloud.firestore {
     }
 
     match /budgets/{budgetId} {
-      allow read, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow read, delete: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin() || hasPermission('budget.view');
       allow create: if isSignedIn() && isValidBudget(request.resource.data);
-      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidBudget(request.resource.data);
+      allow update: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin() || hasPermission('budget.view');
     }
 
     match /expenses/{expenseId} {
-      allow read, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow read, delete: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin() || hasPermission('budget.view');
       allow create: if isSignedIn() && isValidExpense(request.resource.data);
-      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidExpense(request.resource.data);
+      allow update: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin() || hasPermission('budget.view');
     }
 
     match /projects/{projectId} {
@@ -190,10 +190,7 @@ service cloud.firestore {
     }
 
     match /tasks/{taskId} {
-      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && isValidTask(request.resource.data);
-      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin()) && isValidTask(request.resource.data);
-      allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow read, write: if isAdmin();
     }
 
     match /notifications/{notificationId} {

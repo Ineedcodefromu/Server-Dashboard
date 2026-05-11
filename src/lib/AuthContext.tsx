@@ -126,8 +126,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               displayName: authUser.displayName,
               role: isBootstrapOwner ? 'owner' : 'user',
               permissions: isBootstrapOwner 
-                ? ['dashboard.view', 'projects.view', 'projects.edit', 'code.view', 'code.edit', 'logs.view', 'users.manage'] 
-                : ['dashboard.view', 'code.view', 'code.edit'],
+                ? ['dashboard.view', 'chat.global', 'chat.direct', 'budget.view', 'ai.use', 'projects.view', 'projects.edit', 'code.view', 'code.edit', 'logs.view', 'users.manage'] 
+                : ['dashboard.view', 'chat.global', 'chat.direct', 'budget.view', 'ai.use', 'code.view', 'code.edit'],
               theme: 'dark',
               accentColor: 'blue',
               notifications: {
@@ -144,7 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               // Force upgrade to owner for the bootstrap user
               await updateDoc(userRef, { 
                 role: 'owner',
-                permissions: Array.from(new Set([...existingData.permissions, 'users.manage', 'projects.view', 'projects.edit', 'logs.view']))
+                permissions: Array.from(new Set([...existingData.permissions, 'chat.global', 'chat.direct', 'budget.view', 'ai.use', 'users.manage', 'projects.view', 'projects.edit', 'logs.view']))
               });
             }
           }

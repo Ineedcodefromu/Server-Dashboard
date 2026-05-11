@@ -216,9 +216,9 @@ function Sidebar({ activeTab, setActiveTab }: { activeTab: string, setActiveTab:
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'custom', label: 'Mein Space', icon: LayoutGrid },
     { id: 'chat', label: 'Team Chat', icon: MessageSquare },
-    { id: 'budget', label: 'Finanzen', icon: Wallet },
-    { id: 'ai', label: 'AI Assistent', icon: Sparkles },
-    { id: 'kanban', label: 'Kanban', icon: Columns, permission: 'projects.view' },
+    { id: 'budget', label: 'Finanzen', icon: Wallet, permission: 'budget.view' },
+    { id: 'ai', label: 'AI Assistent', icon: Sparkles, permission: 'ai.use' },
+    { id: 'kanban', label: 'Kanban', icon: Columns, adminOnly: true },
     { id: 'documents', label: 'Dokumente', icon: FileBox },
     { id: 'notifications', label: 'Alerts', icon: Bell },
     { id: 'projects', label: 'Projekte', icon: Briefcase, permission: 'projects.view' },
@@ -227,14 +227,23 @@ function Sidebar({ activeTab, setActiveTab }: { activeTab: string, setActiveTab:
     { id: 'stocks', label: 'Aktien', icon: TrendingUp, permission: 'dashboard.view' },
     { id: 'news', label: 'News', icon: Newspaper, permission: 'dashboard.view' },
     { id: 'logs', label: 'Logs', icon: Terminal, permission: 'logs.view' },
-    { id: 'users', label: 'Team', icon: Users, permission: 'users.manage' },
+    { id: 'users', label: 'Team', icon: Users, adminOnly: true },
     { id: 'settings', label: 'Einstellungen', icon: Settings, adminOnly: true },
   ];
 
   const filteredItems = menuItems.filter(item => {
     const isPowerful = effectiveRole === 'admin' || effectiveRole === 'owner';
     if (item.adminOnly && !isPowerful) return false;
-    if (item.permission && !permissions.includes(item.permission) && !isPowerful) return false;
+    
+    // Check specific permission
+    if ('permission' in item && item.permission && !permissions.includes(item.permission) && !isPowerful) return false;
+    
+    // Check "any of" permissions
+    if ('anyPermission' in item && Array.isArray(item.anyPermission)) {
+      const hasAny = item.anyPermission.some(p => permissions.includes(p));
+      if (!hasAny && !isPowerful) return false;
+    }
+
     return true;
   });
 
