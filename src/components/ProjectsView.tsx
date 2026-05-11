@@ -20,8 +20,10 @@ export function ProjectsView() {
   const [isAdding, setIsAdding] = useState(false);
   const [newProject, setNewProject] = useState({ title: '', description: '', status: 'planned', progress: 0 });
 
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+
   useEffect(() => {
-    const q = query(collection(db, 'projects'));
+    const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
     const path = 'projects';
     return onSnapshot(q, (snapshot) => {
       const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
@@ -35,16 +37,40 @@ export function ProjectsView() {
     e.preventDefault();
     const path = 'projects';
     try {
-      await addDoc(collection(db, path), {
-        ...newProject,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
+      if (editingProject) {
+        await updateDoc(doc(db, path, editingProject.id), {
+          ...newProject,
+          updatedAt: serverTimestamp()
+        });
+        setEditingProject(null);
+      } else {
+        await addDoc(collection(db, path), {
+          ...newProject,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+      }
       setNewProject({ title: '', description: '', status: 'planned', progress: 0 });
       setIsAdding(false);
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, path);
     }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Bist du sicher, dass du dieses Projekt löschen möchtest?')) return;
+    const path = 'projects';
+    try {
+      await deleteDoc(doc(db, path, id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  };
+
+  const startEdit = (p: Project) => {
+    setEditingProject(p);
+    setNewProject({ title: p.title, description: p.description, status: p.status, progress: p.progress });
+    setIsAdding(true);
   };
 
   const getStatusIcon = (status: string) => {
@@ -79,7 +105,11 @@ export function ProjectsView() {
         </div>
         {canEdit && (
           <button 
-            onClick={() => setIsAdding(true)}
+            onClick={() => {
+              setEditingProject(null);
+              setNewProject({ title: '', description: '', status: 'planned', progress: 0 });
+              setIsAdding(true);
+            }}
             className="bg-accent text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-xl shadow-accent/20 active:scale-95"
           >
             <Plus className="w-5 h-5" />
@@ -97,6 +127,9 @@ export function ProjectsView() {
             className="overflow-hidden"
           >
             <form onSubmit={handleCreate} className="bg-[#11111a]/80 backdrop-blur-2xl p-8 rounded-3xl border border-white/10 shadow-2xl space-y-4">
+              <h3 className="text-xl font-bold text-white mb-4">
+                {editingProject ? 'Projekt bearbeiten' : 'Neues Projekt erstellen'}
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input 
                   type="text" 
@@ -123,9 +156,25 @@ export function ProjectsView() {
                 onChange={e => setNewProject({...newProject, description: e.target.value})}
                 className="w-full px-4 py-3 bg-white/5 border border-white/10 text-white rounded-xl outline-hidden focus:ring-2 focus:ring-accent/20 min-h-[100px]"
               />
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs font-bold text-slate-400">
+                  <span>Fortschritt</span>
+                  <span>{newProject.progress}%</span>
+                </div>
+                <input 
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={newProject.progress}
+                  onChange={e => setNewProject({...newProject, progress: parseInt(e.target.value)})}
+                  className="w-full accent-accent"
+                />
+              </div>
               <div className="flex justify-end gap-3">
-                <button type="button" onClick={() => setIsAdding(false)} className="px-6 py-3 text-slate-500 font-bold hover:text-white transition-colors">Abbrechen</button>
-                <button type="submit" className="px-8 py-3 bg-white text-black rounded-xl font-bold hover:bg-slate-200 transition-colors">Speichern</button>
+                <button type="button" onClick={() => { setIsAdding(false); setEditingProject(null); }} className="px-6 py-3 text-slate-500 font-bold hover:text-white transition-colors">Abbrechen</button>
+                <button type="submit" className="px-8 py-3 bg-white text-black rounded-xl font-bold hover:bg-slate-200 transition-colors">
+                  {editingProject ? 'Aktualisieren' : 'Speichern'}
+                </button>
               </div>
             </form>
           </motion.div>
@@ -167,9 +216,22 @@ export function ProjectsView() {
             </div>
             
             <div className="mt-6 flex justify-end gap-2 border-t border-white/5 pt-4">
-               <button className="p-2 text-slate-600 hover:text-white transition-colors">
-                 <MoreVertical className="w-5 h-5" />
-               </button>
+               {canEdit && (
+                 <>
+                   <button 
+                     onClick={() => startEdit(project)}
+                     className="p-2 text-slate-600 hover:text-accent transition-colors"
+                   >
+                     <MoreVertical className="w-5 h-5" />
+                   </button>
+                   <button 
+                     onClick={() => handleDelete(project.id)}
+                     className="p-2 text-slate-600 hover:text-red-500 transition-colors"
+                   >
+                     <Trash2 className="w-5 h-5" />
+                   </button>
+                 </>
+               )}
             </div>
           </motion.div>
         ))}

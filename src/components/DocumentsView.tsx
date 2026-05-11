@@ -5,13 +5,14 @@ import {
   Search, Plus, MoreHorizontal, Download, 
   Trash2, Filter, Grid, List as ListIcon,
   Cloud, HardDrive, Share2, ChevronRight,
-  Loader2
+  Loader2, ExternalLink
 } from 'lucide-react';
 import { 
   collection, query, where, onSnapshot, addDoc, 
   deleteDoc, doc, serverTimestamp, orderBy 
 } from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import { db, auth, storage } from '../lib/firebase';
 import { useAuth } from '../lib/AuthContext';
 
 interface Document {
@@ -21,6 +22,8 @@ interface Document {
   type: string;
   category: string;
   userId: string;
+  url: string;
+  storagePath: string;
   createdAt: any;
 }
 
@@ -63,7 +66,6 @@ export function DocumentsView() {
       const extension = file.name.split('.').pop()?.toLowerCase() || 'unknown';
       let category = 'Dokumente';
       
-      // Basic category detection based on extension
       if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(extension)) {
         category = 'Bilder';
       } else if (['mp4', 'mov', 'webm'].includes(extension)) {
@@ -72,12 +74,30 @@ export function DocumentsView() {
         category = 'Dokumente';
       }
 
+      // 1. Upload to Firebase Storage
+      const storagePath = `documents/${auth.currentUser.uid}/${Date.now()}_${file.name}`;
+      const storageRef = ref(storage, storagePath);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      await new Promise((resolve, reject) => {
+        uploadTask.on('state_changed', 
+          null, 
+          (error) => reject(error), 
+          () => resolve(true)
+        );
+      });
+
+      const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+
+      // 2. Save metadata to Firestore
       await addDoc(collection(db, 'documents'), {
         name: file.name,
         type: extension,
         size: Math.round(file.size / 1024), // in KB
         category: category,
         userId: auth.currentUser.uid,
+        url: downloadURL,
+        storagePath: storagePath,
         createdAt: serverTimestamp(),
       });
       
@@ -91,8 +111,20 @@ export function DocumentsView() {
     }
   };
 
-  const deleteDocument = async (id: string) => {
-    await deleteDoc(doc(db, 'documents', id));
+  const deleteDocument = async (d: Document) => {
+    try {
+      // Delete from Storage
+      if (d.storagePath) {
+        const storageRef = ref(storage, d.storagePath);
+        await deleteObject(storageRef);
+      }
+      // Delete from Firestore
+      await deleteDoc(doc(db, 'documents', d.id));
+    } catch (error) {
+      console.error('Delete Error:', error);
+      // Fallback: still try to delete doc if storage fails (e.g. didn't exist)
+      await deleteDoc(doc(db, 'documents', d.id));
+    }
   };
 
   const getFileIcon = (type: string) => {
@@ -231,9 +263,15 @@ export function DocumentsView() {
                          {getFileIcon(doc.type)}
                        </div>
                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                          <button 
+                            onClick={() => window.open(doc.url, '_blank')}
+                            className="p-1.5 bg-accent/10 text-accent rounded-lg hover:bg-accent hover:text-white transition-all"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </button>
                           {(doc.userId === auth.currentUser?.uid || effectiveRole === 'admin' || effectiveRole === 'owner') && (
                             <button 
-                              onClick={() => deleteDocument(doc.id)}
+                              onClick={() => deleteDocument(doc)}
                               className="p-1.5 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all"
                             >
                               <Trash2 className="w-3 h-3" />
@@ -272,12 +310,15 @@ export function DocumentsView() {
                       </p>
                     </div>
                     <div className="flex gap-2">
-                      <button className="p-2 text-text-secondary hover:text-accent transition-all">
+                      <button 
+                        onClick={() => window.open(doc.url, '_blank')}
+                        className="p-2 text-text-secondary hover:text-accent transition-all"
+                      >
                         <Download className="w-4 h-4" />
                       </button>
                       {(doc.userId === auth.currentUser?.uid || effectiveRole === 'admin' || effectiveRole === 'owner') && (
                         <button 
-                          onClick={() => deleteDocument(doc.id)}
+                          onClick={() => deleteDocument(doc)}
                           className="p-2 text-text-secondary hover:text-red-500 transition-all"
                         >
                           <Trash2 className="w-4 h-4" />

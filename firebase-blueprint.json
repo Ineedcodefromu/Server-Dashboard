@@ -105,7 +105,7 @@
     },
     "Document": {
       "title": "Document",
-      "description": "Stored document metadata",
+      "description": "Stored document metadata with storage paths",
       "type": "object",
       "properties": {
         "userId": { "type": "string" },
@@ -113,9 +113,11 @@
         "size": { "type": "number" },
         "type": { "type": "string" },
         "category": { "type": "string" },
+        "url": { "type": "string" },
+        "storagePath": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["userId", "name", "type"]
+      "required": ["userId", "name", "type", "url"]
     },
     "ChatSession": {
       "title": "Chat Session",
