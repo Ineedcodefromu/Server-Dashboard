@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { motion, AnimatePresence } from 'motion/react';
-import { Terminal, Shield, AlertTriangle, Info, Clock, Server, Activity } from 'lucide-react';
+import { Terminal, Shield, AlertTriangle, Info, Clock, Lock } from 'lucide-react';
+import { useAuth } from '../lib/AuthContext';
 import axios from 'axios';
 
 interface LogEntry {
@@ -16,6 +17,7 @@ interface LogEntry {
 }
 
 export function LogsView() {
+  const { profile, permissions } = useAuth();
   const [firestoreLogs, setFirestoreLogs] = useState<LogEntry[]>([]);
   const [backendLogs, setBackendLogs] = useState<LogEntry[]>([]);
   const [filter, setFilter] = useState<'all' | 'info' | 'warning' | 'error'>('all');
@@ -71,6 +73,18 @@ export function LogsView() {
   }).slice(0, 50);
 
   const filteredLogs = allLogs.filter(log => filter === 'all' || log.type === filter);
+
+  const hasAccess = permissions.includes('logs.view') || profile?.role === 'owner';
+
+  if (!hasAccess) {
+    return (
+      <div className="flex flex-col items-center justify-center p-20 glass-card rounded-3xl border-rose-500/20 bg-rose-500/5">
+        <Lock className="w-12 h-12 text-rose-500 mb-4" />
+        <h3 className="text-xl font-bold text-text-primary">Zugriff verweigert</h3>
+        <p className="text-text-secondary text-sm">Du hast keine Berechtigung, System-Logs einzusehen.</p>
+      </div>
+    );
+  }
 
   const getTypeStyles = (type: string) => {
     switch (type) {

@@ -15,20 +15,24 @@ service cloud.firestore {
       return request.auth.token.email_verified == true;
     }
 
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
     function hasRole(role) {
-      return isSignedIn() && getUserData().role == role;
+      return isSignedIn() 
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid)) 
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'user') == role;
     }
 
     function isOwnerRole() {
-      return (isSignedIn() && request.auth.token.email == 'mathewsniko02@gmail.com' && isEmailVerified()) || hasRole('owner');
+      return isSignedIn() && (
+        request.auth.token.email == 'mathewsniko02@gmail.com' || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'user') == 'owner')
+      );
     }
 
     function isAdmin() {
-      return isOwnerRole() || hasRole('admin');
+      return isSignedIn() && (
+        request.auth.token.email == 'mathewsniko02@gmail.com' || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'user') == 'owner' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'user') == 'admin'))
+      );
     }
 
     function isOwner(userId) {
@@ -36,7 +40,24 @@ service cloud.firestore {
     }
 
     function hasPermission(perm) {
-      return isOwnerRole() || isAdmin() || (isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && perm in getUserData().permissions);
+      return isSignedIn() && (
+        request.auth.token.email == 'mathewsniko02@gmail.com' || (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'user') == 'owner' ||
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('permissions', []).hasAny([perm]) || (
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('groupId', null) != null &&
+              exists(/databases/$(database)/documents/user_groups/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.groupId)) &&
+              get(/databases/$(database)/documents/user_groups/$(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.groupId)).data.get('permissions', []).hasAny([perm])
+            )
+          )
+        )
+      );
+    }
+
+    function isValidUserGroup(data) {
+      return data.get('name', '') is string && data.get('name', '').size() > 0 && data.get('name', '').size() <= 100
+        && data.get('permissions', []) is list
+        && (data.get('description', null) == null || data.get('description', '') is string);
     }
 
     function isValidId(id) {
@@ -46,61 +67,94 @@ service cloud.firestore {
     // --- Validation Helpers ---
     function isValidUser(data) {
       return data.keys().hasAll(['uid', 'role']) 
-        && data.uid == request.auth.uid 
-        && data.role in ['owner', 'admin', 'user']
-        && (data.email == null || data.email is string);
+        && data.get('uid', '') == request.auth.uid 
+        && data.get('role', '') in ['owner', 'admin', 'user']
+        && (data.get('email', null) == null || data.get('email', '') is string);
     }
 
     function isValidProject(data) {
-      return data.title is string && data.title.size() > 0 && data.title.size() <= 200;
+      return data.get('title', '') is string && data.get('title', '').size() > 0 && data.get('title', '').size() <= 200;
     }
 
     function isValidTask(data) {
-      return data.title is string && data.title.size() > 0 && data.title.size() <= 200
-        && data.status in ['todo', 'in-progress', 'done']
-        && (data.userId == request.auth.uid);
+      return data.get('title', '') is string && data.get('title', '').size() > 0 && data.get('title', '').size() <= 200
+        && data.get('status', 'todo') in ['todo', 'in-progress', 'done']
+        && (data.get('userId', '') == request.auth.uid);
     }
 
     function isValidNotification(data) {
-      return data.title is string && data.title.size() > 0
-        && data.userId == request.auth.uid
-        && data.read is bool;
+      return data.get('title', '') is string && data.get('title', '').size() > 0
+        && data.get('userId', '') == request.auth.uid
+        && data.get('read', false) is bool;
     }
 
     function isValidDocument(data) {
-      return data.name is string && data.name.size() > 0
-        && data.userId == request.auth.uid;
+      return data.get('name', '') is string && data.get('name', '').size() > 0
+        && data.get('userId', '') == request.auth.uid;
     }
 
     function isValidChatSession(data) {
-      return data.title is string && data.title.size() > 0 && data.title.size() <= 500
-        && (data.userId == request.auth.uid);
+      return data.get('title', '') is string && data.get('title', '').size() > 0 && data.get('title', '').size() <= 600
+        && (data.get('userId', '') == request.auth.uid);
     }
 
     function isValidChatMessage(data) {
-      return data.role in ['user', 'model']
-        && data.content is string && data.content.size() > 0 && data.content.size() <= 10000
-        && (data.userId == request.auth.uid);
+      return data.get('role', 'user') in ['user', 'model']
+        && data.get('content', '') is string && data.get('content', '').size() > 0 && data.get('content', '').size() <= 11000
+        && (data.get('userId', '') == request.auth.uid);
+    }
+
+    function isValidGlobalMessage(data) {
+      return data.get('content', '') is string && data.get('content', '').size() > 0;
+    }
+
+    function isValidDirectMessage(data) {
+      return data.get('content', '') is string && data.get('content', '').size() > 0
+        && data.get('participants', []) is list
+        && data.get('participants', []).size() == 2
+        && request.auth.uid in data.get('participants', []);
+    }
+
+    function isValidBudget(data) {
+      let amount = data.get('amount', 0);
+      return data.get('name', '') is string && (amount is int || amount is float);
+    }
+
+    function isValidExpense(data) {
+      let amount = data.get('amount', 0);
+      return data.get('description', '') is string && (amount is int || amount is float);
     }
 
     // --- Rules ---
 
     match /users/{userId} {
-      allow get: if isSignedIn() && (isOwner(userId) || isAdmin());
-      allow list: if isAdmin();
+      allow get: if isSignedIn() && (isOwner(userId) || hasPermission('users.manage'));
+      allow list: if hasPermission('users.manage');
       allow create: if isSignedIn() && isOwner(userId) && isValidUser(request.resource.data);
       allow update: if isSignedIn() && (
-        (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'watchlist', 'newsFeeds', 'theme', 'accentColor', 'notifications', 'lastActive', 'dashboardLayout'])) ||
+        (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'watchlist', 'newsFeeds', 'theme', 'accentColor', 'notifications', 'lastActive', 'dashboardLayout', 'groupId', 'permissions'])) ||
         (isOwnerRole()) || // Super owner can update anyone
-        (isAdmin() && resource.data.role != 'owner' && request.resource.data.role != 'owner') // Admin can't touch owners or promote to owner
+        (hasPermission('users.manage') && resource.data.get('role', 'user') != 'owner' && request.resource.data.get('role', 'user') != 'owner' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'groupId', 'permissions']))
       );
       allow delete: if isOwnerRole(); // Only owner can delete users
+    }
+
+    match /user_groups/{groupId} {
+      allow read: if isSignedIn();
+      allow create, update: if (isAdmin() || hasPermission('users.manage')) && isValidUserGroup(request.resource.data);
+      allow delete: if (isAdmin() || hasPermission('users.manage')) && !resource.data.get('isSystem', false);
     }
 
     match /global_messages/{messageId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && isValidGlobalMessage(request.resource.data);
       allow delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    match /direct_messages/{messageId} {
+      allow read: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow create: if isSignedIn() && isValidDirectMessage(request.resource.data);
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.senderId == request.auth.uid);
     }
 
     match /budgets/{budgetId} {

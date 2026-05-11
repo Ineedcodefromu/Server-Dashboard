@@ -21,6 +21,16 @@ interface GlobalMessage {
   createdAt: any;
 }
 
+interface DirectMessage {
+  id: string;
+  senderId: string;
+  recipientId: string;
+  senderName: string;
+  content: string;
+  participants: string[];
+  createdAt: any;
+}
+
 interface Member {
   uid: string;
   displayName: string | null;
@@ -30,8 +40,9 @@ interface Member {
 
 export function PresenceChatView() {
   const { profile } = useAuth();
-  const [messages, setMessages] = useState<GlobalMessage[]>([]);
+  const [messages, setMessages] = useState<(GlobalMessage | DirectMessage)[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+  const [selectedContact, setSelectedContact] = useState<Member | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -44,17 +55,36 @@ export function PresenceChatView() {
 
   // Fetch messages
   useEffect(() => {
-    const q = query(
-      collection(db, 'global_messages'),
-      orderBy('createdAt', 'desc'),
-      limit(50)
-    );
+    let q;
+    if (!selectedContact) {
+      q = query(
+        collection(db, 'global_messages'),
+        orderBy('createdAt', 'desc'),
+        limit(50)
+      );
+    } else {
+      q = query(
+        collection(db, 'direct_messages'),
+        where('participants', 'array-contains', auth.currentUser?.uid),
+        orderBy('createdAt', 'desc'),
+        limit(50)
+      );
+    }
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const msgData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as GlobalMessage[];
+      let msgData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as (GlobalMessage | DirectMessage)[];
+      
+      if (selectedContact) {
+        // Client-side filter for the specific DM conversation
+        msgData = (msgData as DirectMessage[]).filter(m => 
+          m.participants.includes(selectedContact.uid)
+        );
+      }
+      
       setMessages(msgData.reverse());
     });
     return () => unsubscribe();
-  }, []);
+  }, [selectedContact]);
 
   // Fetch members
   useEffect(() => {
@@ -75,12 +105,23 @@ export function PresenceChatView() {
 
     setIsSending(true);
     try {
-      await addDoc(collection(db, 'global_messages'), {
-        userId: auth.currentUser.uid,
-        userName: profile?.displayName || 'Anonym',
-        content: inputValue.trim(),
-        createdAt: serverTimestamp(),
-      });
+      if (!selectedContact) {
+        await addDoc(collection(db, 'global_messages'), {
+          userId: auth.currentUser.uid,
+          userName: profile?.displayName || 'Anonym',
+          content: inputValue.trim(),
+          createdAt: serverTimestamp(),
+        });
+      } else {
+        await addDoc(collection(db, 'direct_messages'), {
+          senderId: auth.currentUser.uid,
+          recipientId: selectedContact.uid,
+          senderName: profile?.displayName || 'Anonym',
+          content: inputValue.trim(),
+          participants: [auth.currentUser.uid, selectedContact.uid],
+          createdAt: serverTimestamp(),
+        });
+      }
       setInputValue('');
     } catch (e) {
       console.error(e);
@@ -90,8 +131,9 @@ export function PresenceChatView() {
   };
 
   const deleteMessage = async (id: string) => {
+    const collectionName = selectedContact ? 'direct_messages' : 'global_messages';
     if (profile?.role === 'admin' || profile?.role === 'owner') {
-      await deleteDoc(doc(db, 'global_messages', id));
+      await deleteDoc(doc(db, collectionName, id));
     }
   };
 
@@ -102,8 +144,8 @@ export function PresenceChatView() {
     return diff < 120000; // 2 minutes
   };
 
-  const onlineMembers = members.filter(m => isOnline(m.lastActive));
-  const offlineMembers = members.filter(m => !isOnline(m.lastActive));
+  const onlineMembers = members.filter(m => isOnline(m.lastActive) && m.uid !== auth.currentUser?.uid);
+  const offlineMembers = members.filter(m => !isOnline(m.lastActive) && m.uid !== auth.currentUser?.uid);
 
   return (
     <div className="flex h-[calc(100vh-12rem)] gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -113,44 +155,50 @@ export function PresenceChatView() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-accent" />
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-text-secondary">Mitglieder</h3>
-            </div>
-            <div className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-              {onlineMembers.length} Online
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-text-secondary">Chats</h3>
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar space-y-6">
-            <div className="space-y-3">
-              <p className="text-[9px] font-black uppercase tracking-widest text-text-secondary/50">Online</p>
-              {onlineMembers.map(member => (
-                <div key={member.uid} className="flex items-center gap-3">
-                  <div className="relative">
-                    <div className="w-10 h-10 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center">
-                      <User className="w-5 h-5 text-accent" />
-                    </div>
-                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-slate-900 rounded-full" />
-                  </div>
-                  <div className="flex-1 overflow-hidden">
-                    <p className="text-sm font-bold text-text-primary truncate">{member.displayName || 'Unbekannt'}</p>
-                    <p className="text-[8px] font-black uppercase tracking-widest text-text-secondary">{member.role}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+            {/* Global Chat Button */}
+            <button 
+              onClick={() => setSelectedContact(null)}
+              className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all ${
+                !selectedContact ? 'bg-accent/10 border border-accent/20' : 'hover:bg-white/5 border border-transparent'
+              }`}
+            >
+              <div className="w-10 h-10 rounded-2xl bg-accent/20 flex items-center justify-center text-accent">
+                <Hash className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-bold text-text-primary">Team Chat</p>
+                <p className="text-[8px] font-black uppercase tracking-widest text-text-secondary">Global</p>
+              </div>
+            </button>
 
             <div className="space-y-3">
-              <p className="text-[9px] font-black uppercase tracking-widest text-text-secondary/50">Offline</p>
-              {offlineMembers.map(member => (
-                <div key={member.uid} className="flex items-center gap-3 opacity-50 grayscale">
-                  <div className="w-10 h-10 rounded-2xl bg-input-bg border border-border-subtle flex items-center justify-center">
-                    <User className="w-5 h-5 text-text-secondary" />
+              <p className="text-[9px] font-black uppercase tracking-widest text-text-secondary/50">Mitglieder</p>
+              {[...onlineMembers, ...offlineMembers].map(member => (
+                <button 
+                  key={member.uid}
+                  onClick={() => setSelectedContact(member)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all ${
+                    selectedContact?.uid === member.uid ? 'bg-accent/10 border border-accent/20' : 'hover:bg-white/5 border border-transparent'
+                  }`}
+                >
+                  <div className="relative">
+                    <div className="w-10 h-10 rounded-2xl bg-input-bg border border-border-subtle flex items-center justify-center">
+                      <User className="w-5 h-5 text-text-secondary" />
+                    </div>
+                    {isOnline(member.lastActive) && (
+                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-slate-900 rounded-full" />
+                    )}
                   </div>
-                  <div className="flex-1 overflow-hidden">
+                  <div className="text-left flex-1 overflow-hidden">
                     <p className="text-sm font-bold text-text-primary truncate">{member.displayName || 'Unbekannt'}</p>
                     <p className="text-[8px] font-black uppercase tracking-widest text-text-secondary">{member.role}</p>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -163,25 +211,15 @@ export function PresenceChatView() {
         <div className="px-6 py-4 border-b border-border-subtle flex items-center justify-between bg-white/5">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-2xl bg-accent/5 flex items-center justify-center border border-accent/10">
-              <Hash className="w-5 h-5 text-accent" />
+              {selectedContact ? <User className="w-5 h-5 text-accent" /> : <Hash className="w-5 h-5 text-accent" />}
             </div>
             <div>
-              <h3 className="text-sm font-bold text-text-primary uppercase tracking-widest">Team Chat</h3>
-              <p className="text-[9px] text-text-secondary font-medium tracking-tight">Kollaboration & Austausch</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex -space-x-3">
-              {onlineMembers.slice(0, 3).map(m => (
-                 <div key={m.uid} className="w-8 h-8 rounded-full border-2 border-slate-900 bg-accent/20 flex items-center justify-center text-[10px] font-bold text-accent">
-                   {m.displayName?.[0] || 'U'}
-                 </div>
-              ))}
-              {onlineMembers.length > 3 && (
-                <div className="w-8 h-8 rounded-full border-2 border-slate-900 bg-slate-800 flex items-center justify-center text-[10px] font-bold text-white">
-                  +{onlineMembers.length - 3}
-                </div>
-              )}
+              <h3 className="text-sm font-bold text-text-primary uppercase tracking-widest">
+                {selectedContact ? selectedContact.displayName : 'Team Chat'}
+              </h3>
+              <p className="text-[9px] text-text-secondary font-medium tracking-tight">
+                {selectedContact ? `${selectedContact.role} • ${isOnline(selectedContact.lastActive) ? 'Online' : 'Offline'}` : 'Kollaboration & Austausch'}
+              </p>
             </div>
           </div>
         </div>
@@ -192,8 +230,10 @@ export function PresenceChatView() {
           className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar"
         >
           {messages.map((msg, idx) => {
-            const isMe = msg.userId === auth.currentUser?.uid;
-            const showName = idx === 0 || messages[idx-1].userId !== msg.userId;
+            const senderId = 'userId' in msg ? msg.userId : msg.senderId;
+            const senderName = 'userName' in msg ? msg.userName : msg.senderName;
+            const isMe = senderId === auth.currentUser?.uid;
+            const showName = idx === 0 || ('userId' in messages[idx-1] ? (messages[idx-1] as GlobalMessage).userId : (messages[idx-1] as DirectMessage).senderId) !== senderId;
 
             return (
               <motion.div
@@ -202,15 +242,15 @@ export function PresenceChatView() {
                 animate={{ opacity: 1, x: 0 }}
                 className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
               >
-                {showName && !isMe && (
+                {showName && !isMe && !selectedContact && (
                   <span className="text-[10px] font-black uppercase tracking-widest text-text-secondary mb-1 ml-12">
-                    {msg.userName}
+                    {senderName}
                   </span>
                 )}
                 <div className={`flex gap-3 max-w-[70%] group ${isMe ? 'flex-row-reverse' : ''}`}>
-                  {!isMe && (
+                  {!isMe && !selectedContact && (
                     <div className="w-8 h-8 rounded-xl bg-accent/10 border border-accent/20 shrink-0 flex items-center justify-center text-accent text-xs font-bold">
-                       {msg.userName?.[0] || '?'}
+                       {senderName?.[0] || '?'}
                     </div>
                   )}
                   <div className={`relative p-4 rounded-2xl ${
@@ -249,7 +289,7 @@ export function PresenceChatView() {
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Nachricht an das Team..."
+                  placeholder={selectedContact ? `Nachricht an ${selectedContact.displayName}...` : "Nachricht an das Team..."}
                   className="w-full h-14 bg-input-bg border border-border-subtle rounded-2xl px-5 text-sm outline-none focus:border-accent/40 group-hover:border-border-subtle/80 transition-all pr-24"
                 />
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2 text-text-secondary">
@@ -270,3 +310,4 @@ export function PresenceChatView() {
     </div>
   );
 }
+

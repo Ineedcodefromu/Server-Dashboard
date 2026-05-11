@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { collection, query, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { handleFirestoreError, OperationType } from '../lib/firestoreErrorHandler';
-import { Code, Plus, Terminal, Hash, Copy, Check, Pencil, Trash2 } from 'lucide-react';
+import { Code, Plus, Terminal, Hash, Copy, Check, Pencil, Trash2, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useAuth } from '../lib/AuthContext';
 
 interface Snippet {
   id: string;
@@ -14,6 +15,7 @@ interface Snippet {
 }
 
 export function CodeView() {
+  const { profile, permissions } = useAuth();
   const [snippets, setSnippets] = useState<Snippet[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -94,6 +96,19 @@ export function CodeView() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const hasAccess = permissions.includes('code.view') || profile?.role === 'owner';
+  const canEdit = permissions.includes('code.edit') || profile?.role === 'owner';
+
+  if (!hasAccess) {
+    return (
+      <div className="flex flex-col items-center justify-center p-20 glass-card rounded-3xl border-rose-500/20 bg-rose-500/5">
+        <Lock className="w-12 h-12 text-rose-500 mb-4" />
+        <h3 className="text-xl font-bold text-text-primary">Zugriff verweigert</h3>
+        <p className="text-text-secondary text-sm">Du hast keine Berechtigung, Code-Snippets einzusehen.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center bg-[#11111a]/60 backdrop-blur-xl p-6 rounded-3xl border border-white/5">
@@ -101,16 +116,18 @@ export function CodeView() {
           <h2 className="text-2xl font-bold text-white tracking-tight">Code Bibliothek</h2>
           <p className="text-slate-500 text-sm">Speichere deine wichtigsten Algorithmen und Logik-Snippets.</p>
         </div>
-        <button 
-          onClick={() => {
-            setIsAdding(true);
-            setEditingId(null);
-          }}
-          className="bg-white text-black px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-slate-200 transition-all shadow-xl active:scale-95"
-        >
-          <Plus className="w-5 h-5" />
-          Snippet speichern
-        </button>
+        {canEdit && (
+          <button 
+            onClick={() => {
+              setIsAdding(true);
+              setEditingId(null);
+            }}
+            className="bg-white text-black px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-slate-200 transition-all shadow-xl active:scale-95"
+          >
+            <Plus className="w-5 h-5" />
+            Snippet speichern
+          </button>
+        )}
       </div>
 
       <AnimatePresence>
@@ -231,20 +248,24 @@ export function CodeView() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => startEditing(snippet)}
-                  className="p-2 bg-white/5 border border-white/10 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all opacity-0 group-hover:opacity-100"
-                  title="Bearbeiten"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
-                <button 
-                  onClick={() => setDeletingId(snippet.id)}
-                  className="p-2 bg-white/5 border border-white/10 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-400/10 transition-all opacity-0 group-hover:opacity-100"
-                  title="Löschen"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                {canEdit && (
+                  <>
+                    <button 
+                      onClick={() => startEditing(snippet)}
+                      className="p-2 bg-white/5 border border-white/10 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all opacity-0 group-hover:opacity-100"
+                      title="Bearbeiten"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button 
+                      onClick={() => setDeletingId(snippet.id)}
+                      className="p-2 bg-white/5 border border-white/10 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-400/10 transition-all opacity-0 group-hover:opacity-100"
+                      title="Löschen"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                )}
                 <button 
                   onClick={() => copyToClipboard(snippet.code, snippet.id)}
                   className="flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs font-bold text-slate-400 hover:text-white hover:bg-white/10 transition-all active:scale-95 ml-2"

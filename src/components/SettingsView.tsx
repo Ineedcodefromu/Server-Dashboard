@@ -33,9 +33,8 @@ interface SystemUser {
 }
 
 export function SettingsView() {
-  const { profile, effectiveRole } = useAuth();
-  const [activeTab, setActiveTab] = useState<'profile' | 'appearance' | 'notifications' | 'team'>('profile');
-  const [users, setUsers] = useState<SystemUser[]>([]);
+  const { profile } = useAuth();
+  const [activeTab, setActiveTab] = useState<'profile' | 'appearance' | 'notifications'>('profile');
   const [displayName, setDisplayName] = useState(profile?.displayName || '');
   const [isSaving, setIsSaving] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
@@ -59,17 +58,6 @@ export function SettingsView() {
     if (profile?.notifications) setNotifications(profile.notifications);
   }, [profile]);
 
-  useEffect(() => {
-    const q = query(collection(db, 'users'));
-    const path = 'users';
-    return onSnapshot(q, (snapshot) => {
-      const docs = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as SystemUser));
-      setUsers(docs);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, path);
-    });
-  }, []);
-
   const handleUpdateProfile = async () => {
     if (!profile) return;
     setIsSaving(true);
@@ -90,44 +78,11 @@ export function SettingsView() {
     }
   };
 
-  const toggleRole = async (user: SystemUser) => {
-    if (user.role === 'owner' && profile?.role !== 'owner') {
-      alert('Nur ein Owner kann Owner-Rechte ändern.');
-      return;
-    }
-    
-    const path = `users/${user.uid}`;
-    try {
-      const userRef = doc(db, 'users', user.uid);
-      let nextRole: 'owner' | 'admin' | 'user' = 'user';
-      
-      if (user.role === 'user') nextRole = 'admin';
-      else if (user.role === 'admin' && profile?.role === 'owner') nextRole = 'owner';
-      else nextRole = 'user';
-
-      await updateDoc(userRef, { role: nextRole });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, path);
-    }
-  };
-
-  const deleteUser = async (uid: string) => {
-    if (confirm('Bist du sicher, dass du diesen Benutzer löschen möchtest?')) {
-      const path = `users/${uid}`;
-      try {
-        await deleteDoc(doc(db, 'users', uid));
-      } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, path);
-      }
-    }
-  };
-
   const tabs = [
     { id: 'profile', label: 'Profil', icon: User },
     { id: 'appearance', label: 'Erscheinungsbild', icon: Palette },
     { id: 'notifications', label: 'Benachrichtigungen', icon: Bell },
-    { id: 'team', label: 'Team & Rollen', icon: Shield, adminOnly: true },
-  ].filter(t => !t.adminOnly || (effectiveRole === 'admin' || effectiveRole === 'owner'));
+  ];
 
   return (
     <div className="flex flex-col gap-8 pb-20">
@@ -299,88 +254,8 @@ export function SettingsView() {
             </div>
           )}
 
-          {activeTab === 'team' && (
-            <div className="space-y-6">
-              <div className="bg-[#11111a]/60 p-6 rounded-3xl border border-white/5">
-                <h2 className="text-2xl font-bold text-white tracking-tight">Benutzer & Berechtigungen</h2>
-                <p className="text-slate-500 text-sm">Verwalte hier das Team und deren Zugriffsrechte.</p>
-              </div>
-
-              <div className="bg-[#11111a]/60 rounded-3xl border border-white/5 overflow-hidden shadow-2xl">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-white/2 border-b border-white/5">
-                        <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Benutzer</th>
-                        <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Rolle</th>
-                        <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Status</th>
-                        <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Aktionen</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5">
-                      {users.map((user) => (
-                        <tr key={user.uid} className="hover:bg-white/2 transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-white/5 border border-white/10 rounded-full flex items-center justify-center overflow-hidden">
-                                <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || '')}&background=020617&color=fff`} className="w-full h-full object-cover opacity-80" />
-                              </div>
-                              <div>
-                                <p className="text-sm font-bold text-white">{user.displayName || 'Unbekannt'}</p>
-                                <div className="flex items-center gap-1 text-[10px] text-slate-500 font-mono tracking-tight">
-                                  <Mail className="w-3 h-3" />
-                                  {user.email}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                              user.role === 'owner'
-                                ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
-                                : user.role === 'admin' 
-                                  ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
-                                  : 'bg-accent/10 text-accent border border-accent/20'
-                            }`}>
-                              {user.role === 'owner' ? <ShieldAlert className="w-3 h-3" /> : user.role === 'admin' ? <ShieldAlert className="w-3 h-3" /> : <Shield className="w-3 h-3" />}
-                              {user.role}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 uppercase tracking-widest">
-                              <CheckCircle className="w-3.5 h-3.5" />
-                              Active
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex justify-end gap-2">
-                              <button 
-                                onClick={() => toggleRole(user)}
-                                className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-[10px] font-bold text-slate-400 hover:border-accent/30 hover:text-accent hover:bg-white/10 transition-all shadow-sm active:scale-95"
-                              >
-                                Rolle ändern
-                              </button>
-                              <button 
-                                onClick={() => deleteUser(user.uid)}
-                                disabled={user.role === 'owner'}
-                                className={`p-1.5 transition-colors ${user.role === 'owner' ? 'text-slate-800 cursor-not-allowed opacity-20' : 'text-slate-600 hover:text-red-500'}`}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Bottom Save Action - Only for non-team tabs */}
-          {activeTab !== 'team' && (
-            <div className="flex justify-start">
+          {/* Bottom Save Action */}
+          <div className="flex justify-start">
               <button
                 onClick={handleUpdateProfile}
                 disabled={isSaving}
@@ -404,8 +279,7 @@ export function SettingsView() {
                 </div>
               </button>
             </div>
-          )}
-        </motion.div>
+          </motion.div>
       </AnimatePresence>
 
       {/* Security Tip Overlayish Footer Card */}

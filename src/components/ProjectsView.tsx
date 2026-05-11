@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { collection, query, onSnapshot, addDoc, updateDoc, doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { handleFirestoreError, OperationType } from '../lib/firestoreErrorHandler';
-import { Briefcase, Plus, MoreVertical, Clock, CheckCircle2, AlertCircle, PlayCircle } from 'lucide-react';
+import { Briefcase, Plus, MoreVertical, Clock, CheckCircle2, AlertCircle, PlayCircle, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useAuth } from '../lib/AuthContext';
 
 interface Project {
   id: string;
@@ -14,6 +15,7 @@ interface Project {
 }
 
 export function ProjectsView() {
+  const { profile, permissions } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [newProject, setNewProject] = useState({ title: '', description: '', status: 'planned', progress: 0 });
@@ -55,6 +57,19 @@ export function ProjectsView() {
     }
   };
 
+  const hasAccess = permissions.includes('projects.view') || profile?.role === 'owner';
+  const canEdit = permissions.includes('projects.edit') || profile?.role === 'owner';
+
+  if (!hasAccess) {
+    return (
+      <div className="flex flex-col items-center justify-center p-20 glass-card rounded-3xl border-rose-500/20 bg-rose-500/5">
+        <Lock className="w-12 h-12 text-rose-500 mb-4" />
+        <h3 className="text-xl font-bold text-text-primary">Zugriff verweigert</h3>
+        <p className="text-text-secondary text-sm">Du hast keine Berechtigung, Projekte einzusehen.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center glass-card p-6 rounded-3xl">
@@ -62,13 +77,15 @@ export function ProjectsView() {
           <h2 className="text-2xl font-bold text-text-primary tracking-tight">Projekt-Übersicht</h2>
           <p className="text-text-secondary text-sm">Verwalte deine aktuellen Entwicklungsziele.</p>
         </div>
-        <button 
-          onClick={() => setIsAdding(true)}
-          className="bg-accent text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-xl shadow-accent/20 active:scale-95"
-        >
-          <Plus className="w-5 h-5" />
-          Neues Projekt
-        </button>
+        {canEdit && (
+          <button 
+            onClick={() => setIsAdding(true)}
+            className="bg-accent text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-xl shadow-accent/20 active:scale-95"
+          >
+            <Plus className="w-5 h-5" />
+            Neues Projekt
+          </button>
+        )}
       </div>
 
       <AnimatePresence>

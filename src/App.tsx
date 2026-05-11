@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   BarChart3, Code, FileText, Settings, LayoutDashboard, 
-  TrendingUp, Newspaper, Briefcase, LogOut, Menu, X, 
+  TrendingUp, Newspaper, Briefcase, LogOut, Menu, X, Users,
   Terminal, User as UserIcon, Shield, ShieldAlert, ChevronRight, Columns, Sparkles,
   Bell, FileBox, MessageSquare, Wallet, LayoutGrid
 } from 'lucide-react';
@@ -31,6 +31,7 @@ import { CodeView } from './components/CodeView';
 import { SettingsView } from './components/SettingsView';
 import { PerformanceView } from './components/PerformanceView';
 import { LogsView } from './components/LogsView';
+import { UsersManagementView } from './components/UsersManagementView';
 import axios from 'axios';
 
 // --- Components ---
@@ -209,7 +210,7 @@ function ProfileMenu() {
 }
 
 function Sidebar({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (t: string) => void }) {
-  const { profile, effectiveRole } = useAuth();
+  const { profile, permissions, effectiveRole } = useAuth();
   
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -226,13 +227,14 @@ function Sidebar({ activeTab, setActiveTab }: { activeTab: string, setActiveTab:
     { id: 'stocks', label: 'Aktien', icon: TrendingUp, permission: 'dashboard.view' },
     { id: 'news', label: 'News', icon: Newspaper, permission: 'dashboard.view' },
     { id: 'logs', label: 'Logs', icon: Terminal, permission: 'logs.view' },
+    { id: 'users', label: 'Team', icon: Users, permission: 'users.manage' },
     { id: 'settings', label: 'Einstellungen', icon: Settings, adminOnly: true },
   ];
 
   const filteredItems = menuItems.filter(item => {
     const isPowerful = effectiveRole === 'admin' || effectiveRole === 'owner';
     if (item.adminOnly && !isPowerful) return false;
-    if (item.permission && !profile?.permissions.includes(item.permission) && !isPowerful) return false;
+    if (item.permission && !permissions.includes(item.permission) && !isPowerful) return false;
     return true;
   });
 
@@ -393,6 +395,7 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
             {activeTab === 'stocks' && <StocksView />}
             {activeTab === 'news' && <NewsView />}
             {activeTab === 'logs' && <LogsView />}
+            {activeTab === 'users' && <UsersManagementView />}
             {activeTab === 'settings' && <SettingsView />}
           </motion.div>
         </AnimatePresence>

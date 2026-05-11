@@ -9,6 +9,7 @@ interface UserProfile {
   email: string | null;
   displayName: string | null;
   role: 'owner' | 'admin' | 'user';
+  groupId?: string;
   permissions: string[];
   theme?: 'light' | 'dark' | 'system';
   accentColor?: 'blue' | 'purple' | 'emerald' | 'amber' | 'rose' | 'indigo';
@@ -28,6 +29,7 @@ interface AuthContextType {
   user: FirebaseUser | null;
   profile: UserProfile | null;
   effectiveRole: 'owner' | 'admin' | 'user' | null;
+  permissions: string[];
   loading: boolean;
   setImpersonatedRole: (role: 'owner' | 'admin' | 'user' | null) => void;
 }
@@ -36,6 +38,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null, 
   profile: null, 
   effectiveRole: null,
+  permissions: [],
   loading: true,
   setImpersonatedRole: () => {} 
 });
@@ -43,10 +46,34 @@ const AuthContext = createContext<AuthContextType>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [groupPermissions, setGroupPermissions] = useState<string[]>([]);
   const [impersonatedRole, setImpersonatedRole] = useState<'owner' | 'admin' | 'user' | null>(null);
   const [loading, setLoading] = useState(true);
 
   const effectiveRole = impersonatedRole || profile?.role || null;
+  
+  // Combine user permissions and group permissions
+  // If owner, they have all permissions implicitly in the app logic or through the rules
+  // But for UI toggles, we combine them.
+  const permissions = Array.from(new Set([
+    ...(profile?.permissions || []),
+    ...groupPermissions
+  ]));
+
+  useEffect(() => {
+    if (profile?.groupId) {
+      const unsubGroup = onSnapshot(doc(db, 'user_groups', profile.groupId), (snap) => {
+        if (snap.exists()) {
+          setGroupPermissions(snap.data().permissions || []);
+        } else {
+          setGroupPermissions([]);
+        }
+      });
+      return () => unsubGroup();
+    } else {
+      setGroupPermissions([]);
+    }
+  }, [profile?.groupId]);
 
   useEffect(() => {
     let unsubscribeProfile: (() => void) | null = null;
@@ -138,7 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, profile, effectiveRole, loading, setImpersonatedRole }}>
+    <AuthContext.Provider value={{ user, profile, effectiveRole, permissions, loading, setImpersonatedRole }}>
       {children}
     </AuthContext.Provider>
   );

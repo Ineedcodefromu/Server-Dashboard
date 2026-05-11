@@ -9,6 +9,7 @@
         "email": { "type": "string" },
         "displayName": { "type": "string" },
         "role": { "type": "string", "enum": ["owner", "admin", "user"] },
+        "groupId": { "type": "string" },
         "permissions": { "type": "array", "items": { "type": "string" } },
         "theme": { "type": "string", "enum": ["light", "dark", "system"], "default": "dark" },
         "accentColor": { "type": "string", "enum": ["blue", "purple", "emerald", "amber", "rose", "indigo"], "default": "blue" },
@@ -154,6 +155,20 @@
       },
       "required": ["userId", "userName", "content"]
     },
+    "DirectMessage": {
+      "title": "Direct Message",
+      "description": "Private message between two users",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "recipientId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "content": { "type": "string" },
+        "participants": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderId", "recipientId", "content", "participants"]
+    },
     "Budget": {
       "title": "Budget",
       "description": "Project or category budget",
@@ -190,6 +205,18 @@
         "userId": { "type": "string" },
         "symbols": { "type": "array", "items": { "type": "string" } }
       }
+    },
+    "UserGroup": {
+      "title": "User Group",
+      "description": "Group of users with shared permissions",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "permissions": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name"]
     }
   },
   "firestore": {
@@ -233,6 +260,10 @@
       "schema": "GlobalMessage",
       "description": "Messages in the team-wide chat"
     },
+    "/direct_messages/{messageId}": {
+      "schema": "DirectMessage",
+      "description": "Private direct messages"
+    },
     "/budgets/{budgetId}": {
       "schema": "Budget",
       "description": "Project budgets"
@@ -244,6 +275,10 @@
     "/watchlists/{userId}": {
       "schema": "StockWatchlist",
       "description": "User stock watchlists"
+    },
+    "/user_groups/{groupId}": {
+      "schema": "UserGroup",
+      "description": "Shared user groups"
     }
   }
 }
