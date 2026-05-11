@@ -200,7 +200,8 @@ service cloud.firestore {
     }
 
     match /documents/{documentId} {
-      allow read, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow read: if isSignedIn();
+      allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if isSignedIn() && isValidDocument(request.resource.data);
     }
 

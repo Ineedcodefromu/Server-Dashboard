@@ -11,6 +11,7 @@ import {
   deleteDoc, doc, serverTimestamp, orderBy 
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
+import { useAuth } from '../lib/AuthContext';
 
 interface Document {
   id: string;
@@ -25,6 +26,7 @@ interface Document {
 const CATEGORIES = ['Alle', 'Dokumente', 'Bilder', 'Projekte', 'Rechnungen'];
 
 export function DocumentsView() {
+  const { effectiveRole } = useAuth();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('Alle');
@@ -35,7 +37,6 @@ export function DocumentsView() {
 
     const q = query(
       collection(db, 'documents'),
-      where('userId', '==', auth.currentUser.uid),
       orderBy('createdAt', 'desc')
     );
 
@@ -91,7 +92,7 @@ export function DocumentsView() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex flex-col gap-1">
           <h2 className="text-3xl font-bold text-text-primary tracking-tight">Dokumente</h2>
-          <p className="text-text-secondary text-sm">Verwalte deine Dateien und Projektunterlagen sicher.</p>
+          <p className="text-text-secondary text-sm">Verwalte alle Team-Dateien und Projektunterlagen zentral.</p>
         </div>
         
         <div className="flex items-center gap-3">
@@ -99,7 +100,7 @@ export function DocumentsView() {
             <Cloud className="w-5 h-5 text-accent" />
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary pr-4">Speicherplatz</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary pr-4">Gesamt-Speicher</p>
                 <span className="text-[10px] font-bold text-text-primary">{(totalStorage / 1024).toFixed(1)} MB / 512 MB</span>
               </div>
               <div className="w-40 h-1 bg-input-bg rounded-full overflow-hidden">
@@ -197,12 +198,14 @@ export function DocumentsView() {
                          {getFileIcon(doc.type)}
                        </div>
                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                          <button 
-                            onClick={() => deleteDocument(doc.id)}
-                            className="p-1.5 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
+                          {(doc.userId === auth.currentUser?.uid || effectiveRole === 'admin' || effectiveRole === 'owner') && (
+                            <button 
+                              onClick={() => deleteDocument(doc.id)}
+                              className="p-1.5 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
                        </div>
                     </div>
                     <div className="space-y-1 pr-2">
@@ -239,12 +242,14 @@ export function DocumentsView() {
                       <button className="p-2 text-text-secondary hover:text-accent transition-all">
                         <Download className="w-4 h-4" />
                       </button>
-                      <button 
-                        onClick={() => deleteDocument(doc.id)}
-                        className="p-2 text-text-secondary hover:text-red-500 transition-all"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {(doc.userId === auth.currentUser?.uid || effectiveRole === 'admin' || effectiveRole === 'owner') && (
+                        <button 
+                          onClick={() => deleteDocument(doc.id)}
+                          className="p-2 text-text-secondary hover:text-red-500 transition-all"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </motion.div>
                 ))}
