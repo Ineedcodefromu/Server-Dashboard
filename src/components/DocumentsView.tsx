@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   File, FileText, Image as ImageIcon, Video, 
   Search, Plus, MoreHorizontal, Download, 
   Trash2, Filter, Grid, List as ListIcon,
-  Cloud, HardDrive, Share2, ChevronRight
+  Cloud, HardDrive, Share2, ChevronRight,
+  Loader2
 } from 'lucide-react';
 import { 
   collection, query, where, onSnapshot, addDoc, 
@@ -31,6 +32,8 @@ export function DocumentsView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('Alle');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!auth.currentUser) return;
@@ -51,22 +54,41 @@ export function DocumentsView() {
     return () => unsubscribe();
   }, []);
 
-  const handleUploadSim = async () => {
-    if (!auth.currentUser) return;
-    
-    // Simulate some document metadata
-    const demos = [
-      { name: 'jahresabschluss_2025.pdf', type: 'pdf', size: 1240, category: 'Rechnungen' },
-      { name: 'logo_entwurf.png', type: 'png', size: 450, category: 'Bilder' },
-      { name: 'projektplan_delta.docx', type: 'docx', size: 85, category: 'Projekte' },
-    ];
-    const demo = demos[Math.floor(Math.random() * demos.length)];
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !auth.currentUser) return;
 
-    await addDoc(collection(db, 'documents'), {
-      ...demo,
-      userId: auth.currentUser.uid,
-      createdAt: serverTimestamp(),
-    });
+    setIsUploading(true);
+    try {
+      const extension = file.name.split('.').pop()?.toLowerCase() || 'unknown';
+      let category = 'Dokumente';
+      
+      // Basic category detection based on extension
+      if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(extension)) {
+        category = 'Bilder';
+      } else if (['mp4', 'mov', 'webm'].includes(extension)) {
+        category = 'Projekte';
+      } else if (['pdf', 'docx', 'xlsx', 'txt'].includes(extension)) {
+        category = 'Dokumente';
+      }
+
+      await addDoc(collection(db, 'documents'), {
+        name: file.name,
+        type: extension,
+        size: Math.round(file.size / 1024), // in KB
+        category: category,
+        userId: auth.currentUser.uid,
+        createdAt: serverTimestamp(),
+      });
+      
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      console.error('Upload Error:', error);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const deleteDocument = async (id: string) => {
@@ -111,12 +133,23 @@ export function DocumentsView() {
               </div>
             </div>
           </div>
+          <input 
+            type="file" 
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            className="hidden"
+          />
           <button 
-            onClick={handleUploadSim}
-            className="flex items-center gap-2 px-6 py-4 bg-accent text-white rounded-[1.5rem] font-bold uppercase tracking-widest text-[10px] shadow-xl shadow-accent/20 hover:scale-105 active:scale-95 transition-all"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="flex items-center gap-3 px-6 py-4 bg-accent text-white rounded-[1.5rem] font-bold uppercase tracking-widest text-[10px] shadow-xl shadow-accent/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
           >
-            <Plus className="w-4 h-4" />
-            Hochladen
+            {isUploading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Plus className="w-4 h-4" />
+            )}
+            {isUploading ? 'Lädt hoch...' : 'Hochladen'}
           </button>
         </div>
       </div>
