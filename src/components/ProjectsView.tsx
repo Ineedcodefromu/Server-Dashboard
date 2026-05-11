@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { collection, query, onSnapshot, addDoc, updateDoc, doc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, onSnapshot, addDoc, updateDoc, doc, deleteDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { handleFirestoreError, OperationType } from '../lib/firestoreErrorHandler';
-import { Briefcase, Plus, MoreVertical, Clock, CheckCircle2, AlertCircle, PlayCircle, Lock } from 'lucide-react';
+import { Briefcase, Plus, MoreVertical, Clock, CheckCircle2, AlertCircle, PlayCircle, Lock, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../lib/AuthContext';
 
@@ -15,7 +15,7 @@ interface Project {
 }
 
 export function ProjectsView() {
-  const { profile, permissions } = useAuth();
+  const { effectiveRole, permissions } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [newProject, setNewProject] = useState({ title: '', description: '', status: 'planned', progress: 0 });
@@ -25,12 +25,13 @@ export function ProjectsView() {
   useEffect(() => {
     const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
     const path = 'projects';
-    return onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
       setProjects(docs);
     }, (error) => {
-      handleFirestoreError(error, OperationType.GET, path);
+      console.error('Projects subscription error:', error);
     });
+    return () => unsubscribe();
   }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -83,8 +84,8 @@ export function ProjectsView() {
     }
   };
 
-  const hasAccess = permissions.includes('projects.view') || profile?.role === 'owner';
-  const canEdit = permissions.includes('projects.edit') || profile?.role === 'owner';
+  const hasAccess = permissions.includes('projects.view') || effectiveRole === 'owner' || effectiveRole === 'admin';
+  const canEdit = permissions.includes('projects.edit') || effectiveRole === 'owner' || effectiveRole === 'admin';
 
   if (!hasAccess) {
     return (

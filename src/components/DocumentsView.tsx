@@ -77,17 +77,19 @@ export function DocumentsView() {
       // 1. Upload to Firebase Storage
       const storagePath = `documents/${auth.currentUser.uid}/${Date.now()}_${file.name}`;
       const storageRef = ref(storage, storagePath);
+      
       const uploadTask = uploadBytesResumable(storageRef, file);
 
-      await new Promise((resolve, reject) => {
-        uploadTask.on('state_changed', 
-          null, 
-          (error) => reject(error), 
-          () => resolve(true)
-        );
-      });
+      // Listen for progress and completion
+      uploadTask.on('state_changed', 
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          console.log('Upload is ' + progress + '% done');
+        }
+      );
 
-      const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+      const snapshot = await uploadTask;
+      const downloadURL = await getDownloadURL(snapshot.ref);
 
       // 2. Save metadata to Firestore
       await addDoc(collection(db, 'documents'), {
@@ -104,8 +106,9 @@ export function DocumentsView() {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload Error:', error);
+      alert('Fehler beim Hochladen: ' + (error.message || 'Unbekannter Fehler'));
     } finally {
       setIsUploading(false);
     }
