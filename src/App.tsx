@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   BarChart3, Code, FileText, Settings, LayoutDashboard, 
-  TrendingUp, Newspaper, Briefcase, LogOut, Menu, X, Users,
+  TrendingUp, Newspaper, Briefcase, LogOut, Menu, X, Users, BarChart2,
   Terminal, User as UserIcon, Shield, ShieldAlert, ChevronRight, Columns, Sparkles,
   Bell, FileBox, MessageSquare, Wallet, LayoutGrid
 } from 'lucide-react';
@@ -23,6 +23,7 @@ import { DashboardOverview } from './components/DashboardOverview';
 import { StocksView } from './components/StocksView';
 import { NewsView } from './components/NewsView';
 import { ProjectsView } from './components/ProjectsView';
+import { DerivativesComparisonView } from './components/DerivativesComparisonView';
 import { KanbanView } from './components/KanbanView';
 import { AIAssistantView } from './components/AIAssistantView';
 import { NotificationsView } from './components/NotificationsView';
@@ -225,6 +226,7 @@ function SidebarContent({ activeTab, setActiveTab }: { activeTab: string, setAct
     { id: 'code', label: 'Code', icon: Code, permission: 'code.view' },
     { id: 'performance', label: 'Leistung', icon: BarChart3, permission: 'dashboard.view' },
     { id: 'stocks', label: 'Aktien', icon: TrendingUp, permission: 'dashboard.view' },
+    { id: 'derivatives', label: 'Derivate', icon: BarChart2, permission: 'dashboard.view' },
     { id: 'news', label: 'News', icon: Newspaper, permission: 'dashboard.view' },
     { id: 'logs', label: 'Logs', icon: Terminal, permission: 'logs.view' },
     { id: 'users', label: 'Team', icon: Users, adminOnly: true },
@@ -248,12 +250,12 @@ function SidebarContent({ activeTab, setActiveTab }: { activeTab: string, setAct
   });
 
   return (
-    <nav className="flex-1 flex flex-col gap-2 md:gap-6 w-full px-4 md:px-0">
+    <nav className="flex-1 flex flex-col gap-2 md:gap-6 w-full px-4 md:px-0 no-scrollbar">
       {filteredItems.map((item) => (
         <button
           key={item.id}
           onClick={() => setActiveTab(item.id)}
-          className={`p-3 md:p-3 rounded-xl transition-all duration-300 group relative flex items-center gap-4 md:justify-center md:gap-0 ${
+          className={`w-full md:w-auto p-3 md:p-3 rounded-xl transition-all duration-300 group relative flex items-center gap-4 md:justify-center md:gap-0 ${
             activeTab === item.id 
               ? 'bg-accent/20 text-accent border border-accent/30' 
               : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
@@ -261,7 +263,7 @@ function SidebarContent({ activeTab, setActiveTab }: { activeTab: string, setAct
           title={item.label}
         >
           <item.icon className="w-6 h-6 shrink-0" />
-          <span className="text-[10px] font-bold uppercase tracking-widest md:hidden">{item.label}</span>
+          <span className="text-xs font-bold uppercase tracking-widest md:hidden">{item.label}</span>
           {activeTab === item.id && (
             <motion.div 
               layoutId="active-pill"
@@ -345,9 +347,9 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
       <div className="fixed bottom-[-100px] right-[-100px] w-[500px] h-[500px] bg-indigo-600/5 rounded-full blur-[120px] pointer-events-none"></div>
 
       {/* Sidebar with Mobile Toggle */}
-      <div className={`fixed inset-0 bg-[#050508]/80 backdrop-blur-sm z-[30] md:hidden transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsSidebarOpen(false)} />
+      <div className={`fixed inset-0 bg-[#050508]/80 backdrop-blur-sm z-[50] md:hidden transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsSidebarOpen(false)} />
       
-      <div className={`fixed left-0 top-0 h-screen w-64 md:w-20 bg-[#0a0a0f]/90 md:bg-[#0a0a0f]/40 backdrop-blur-md border-r border-white/5 flex flex-col items-center py-8 z-[40] transition-transform duration-300 overflow-y-auto no-scrollbar ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+      <div className={`fixed left-0 top-0 h-screen w-64 md:w-20 bg-[#0a0a0f]/95 md:bg-[#0a0a0f]/40 backdrop-blur-md border-r border-white/5 flex flex-col md:items-center py-8 z-[60] transition-transform duration-300 overflow-y-auto no-scrollbar ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <div className="mb-10 flex items-center justify-between w-full px-6 md:px-0 md:justify-center">
           <div className="w-10 h-10 bg-gradient-to-br from-accent to-indigo-600 rounded-lg glow-accent flex items-center justify-center">
             <Shield className="w-6 h-6 text-white" />
@@ -423,6 +425,7 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
             {activeTab === 'code' && <CodeView />}
             {activeTab === 'performance' && <PerformanceView />}
             {activeTab === 'stocks' && <StocksView />}
+            {activeTab === 'derivatives' && <DerivativesComparisonView />}
             {activeTab === 'news' && <NewsView />}
             {activeTab === 'logs' && <LogsView />}
             {activeTab === 'users' && <UsersManagementView />}
