@@ -253,7 +253,7 @@ function SidebarContent({ activeTab, setActiveTab }: { activeTab: string, setAct
         <button
           key={item.id}
           onClick={() => setActiveTab(item.id)}
-          className={`p-3 md:p-3 rounded-xl transition-all duration-300 group relative flex items-center gap-4 md:justify-center ${
+          className={`p-3 md:p-3 rounded-xl transition-all duration-300 group relative flex items-center gap-4 md:justify-center md:gap-0 ${
             activeTab === item.id 
               ? 'bg-accent/20 text-accent border border-accent/30' 
               : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
@@ -265,7 +265,7 @@ function SidebarContent({ activeTab, setActiveTab }: { activeTab: string, setAct
           {activeTab === item.id && (
             <motion.div 
               layoutId="active-pill"
-              className="absolute -right-4 md:-right-1 top-1/2 -translate-y-1/2 w-1 h-6 bg-accent rounded-full mb:mr-4"
+              className="absolute -right-4 md:-right-1 top-1/2 -translate-y-1/2 w-1 h-6 bg-accent rounded-full"
             />
           )}
         </button>
@@ -275,7 +275,7 @@ function SidebarContent({ activeTab, setActiveTab }: { activeTab: string, setAct
 }
 
 function Sidebar() {
-  return null; // Sidebar is integrated into AuthenticatedLayout now
+  return null; // Integrated into AuthenticatedLayout for responsiveness
 }
 
 // --- Page Views ---
@@ -347,7 +347,7 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
       {/* Sidebar with Mobile Toggle */}
       <div className={`fixed inset-0 bg-[#050508]/80 backdrop-blur-sm z-[30] md:hidden transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsSidebarOpen(false)} />
       
-      <div className={`fixed left-0 top-0 h-screen w-64 md:w-20 bg-[#0a0a0f]/90 md:bg-[#0a0a0f]/40 backdrop-blur-md border-r border-white/5 flex flex-col items-center py-8 z-[40] transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+      <div className={`fixed left-0 top-0 h-screen w-64 md:w-20 bg-[#0a0a0f]/90 md:bg-[#0a0a0f]/40 backdrop-blur-md border-r border-white/5 flex flex-col items-center py-8 z-[40] transition-transform duration-300 overflow-y-auto no-scrollbar ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <div className="mb-10 flex items-center justify-between w-full px-6 md:px-0 md:justify-center">
           <div className="w-10 h-10 bg-gradient-to-br from-accent to-indigo-600 rounded-lg glow-accent flex items-center justify-center">
             <Shield className="w-6 h-6 text-white" />
@@ -364,7 +364,7 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
         </div>
       </div>
       
-      <header className="fixed top-0 right-0 left-0 md:left-20 h-16 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-white/5 z-10 px-4 md:px-8 flex items-center justify-between">
+      <header className="fixed top-0 right-0 left-0 md:left-20 h-16 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-white/5 z-20 px-4 md:px-8 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setIsSidebarOpen(true)}
@@ -392,9 +392,9 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
               <div className="hidden sm:flex items-center gap-2">
                 <div className="text-[10px] text-right">
                     <p className="text-white font-bold leading-tight uppercase">
-                      {effectiveRole === 'owner' ? 'Owner' : 'Admin'}
+                      {effectiveRole === 'owner' ? 'Owner Console' : 'Admin Console'}
                     </p>
-                    <p className="text-slate-600 leading-tight">v2.4.0</p>
+                    <p className="text-slate-600 leading-tight">v2.4.0-stable</p>
                 </div>
               </div>
             </>
@@ -402,7 +402,7 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
         </div>
       </header>
 
-      <main className="pt-24 p-4 md:p-8 flex-1 max-w-7xl w-full mx-auto relative z-10 overflow-x-hidden">
+      <main className="pt-24 p-4 md:p-8 flex-1 max-w-7xl w-full mx-auto relative z-10">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}

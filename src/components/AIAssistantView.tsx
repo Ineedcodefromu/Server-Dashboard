@@ -302,7 +302,7 @@ export function AIAssistantView() {
                 <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest sm:hidden">Online</p>
                 <span className="w-1 h-1 rounded-full bg-slate-500/30 hidden sm:inline" />
                 <p className={`text-[10px] font-bold uppercase tracking-widest truncate ${isAdmin ? 'text-accent' : 'text-text-secondary'}`}>
-                  {isAdmin ? 'Admin' : 'Basis'}
+                   {isAdmin ? 'Admin' : 'Basis'}
                 </p>
               </div>
             </div>

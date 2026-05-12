@@ -205,7 +205,7 @@ export function DocumentsView() {
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`whitespace-nowrap px-4 py-3 rounded-xl transition-all font-bold text-xs flex items-center justify-between group shrink-0 md:shrink ${
+                  className={`whitespace-nowrap md:w-full text-left px-4 py-3 rounded-xl transition-all font-bold text-xs flex items-center justify-between group shrink-0 md:shrink ${
                     activeCategory === cat 
                       ? 'bg-accent/10 text-accent border border-accent/20' 
                       : 'text-text-secondary hover:bg-input-bg border border-transparent'

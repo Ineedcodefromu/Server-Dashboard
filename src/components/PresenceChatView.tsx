@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Send, Users, MessageSquare, Circle, 
   Trash2, Shield, User, Bot, Sparkles,
-  Hash, Image as ImageIcon, Smile, Plus
+  Hash, Image as ImageIcon, Smile, X
 } from 'lucide-react';
 import { 
   collection, query, where, onSnapshot, addDoc, 
@@ -176,7 +176,7 @@ export function PresenceChatView() {
   return (
     <div className="flex flex-col lg:flex-row h-[calc(100vh-14rem)] md:h-[calc(100vh-12rem)] gap-4 md:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Sidebar - Members */}
-      <div className={`${showSidebar ? 'flex' : 'hidden'} lg:flex fixed lg:relative inset-0 lg:inset-auto z-20 lg:z-0 bg-[#050508] lg:bg-transparent p-4 lg:p-0 w-full lg:w-1/4 flex-col gap-6`}>
+      <div className={`${showSidebar ? 'flex' : 'hidden'} lg:flex fixed lg:relative inset-0 lg:inset-auto z-50 lg:z-0 bg-[#050508] lg:bg-transparent p-4 lg:p-0 w-full lg:w-1/4 flex-col gap-6`}>
         <div className="glass-card rounded-3xl p-6 border-border-subtle hover:border-accent/20 transition-all flex flex-col h-full overflow-hidden">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
@@ -184,7 +184,7 @@ export function PresenceChatView() {
               <h3 className="text-[10px] font-black uppercase tracking-widest text-text-secondary">Chats</h3>
             </div>
             <button onClick={() => setShowSidebar(false)} className="lg:hidden p-2 -mr-2 text-slate-500">
-              <Plus className="w-6 h-6 rotate-45" />
+              <X className="w-6 h-6" />
             </button>
           </div>
 
@@ -239,7 +239,7 @@ export function PresenceChatView() {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 glass-card rounded-3xl flex flex-col overflow-hidden border-border-subtle hover:border-accent/20 transition-all relative">
+      <div className="flex-1 glass-card rounded-3xl flex flex-col overflow-hidden border-border-subtle hover:border-accent/20 transition-all">
         {/* Chat Header */}
         <div className="px-6 py-4 border-b border-border-subtle flex items-center justify-between bg-white/5">
           <div className="flex items-center gap-4">
@@ -249,7 +249,7 @@ export function PresenceChatView() {
             >
               <Users className="w-5 h-5" />
             </button>
-            <div className="w-10 h-10 rounded-2xl bg-accent/5 flex items-center justify-center border border-accent/10 sm:flex hidden">
+            <div className="w-10 h-10 rounded-2xl bg-accent/5 hidden sm:flex items-center justify-center border border-accent/10">
               {selectedContact ? <User className="w-5 h-5 text-accent" /> : <Hash className="w-5 h-5 text-accent" />}
             </div>
             <div>

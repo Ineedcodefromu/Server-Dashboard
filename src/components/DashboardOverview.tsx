@@ -80,11 +80,11 @@ export function DashboardOverview() {
         <p className="text-slate-500 text-sm">Dashboard Status: <span className="text-green-500 font-medium">System Online</span> • Alle Module bereit.</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard label="Projekte" value="12" icon={Briefcase} trend="+2" />
-        <StatCard label="Aufgaben" value={taskCount.toString()} icon={Columns} />
+        <StatCard label="Offene Aufgaben" value={taskCount.toString()} icon={Columns} />
         <StatCard label="Alerts" value={unreadCount.toString()} icon={Bell} />
-        <StatCard label="Logs" value={recentLogs.length.toString()} icon={Terminal} />
+        <StatCard label="System Logs" value={recentLogs.length.toString()} icon={Terminal} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
