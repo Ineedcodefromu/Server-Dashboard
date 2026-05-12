@@ -50,10 +50,16 @@ export function AIAssistantView() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const isAdmin = profile?.role === 'admin' || profile?.role === 'owner';
+
+  // Toggle sidebar based on screen size on mount
+  useEffect(() => {
+    const isMobile = window.innerWidth < 1024;
+    setIsSidebarOpen(!isMobile);
+  }, []);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -109,6 +115,12 @@ export function AIAssistantView() {
       updatedAt: serverTimestamp(),
     });
     setCurrentSessionId(newSession.id);
+    if (window.innerWidth < 1024) setIsSidebarOpen(false);
+  };
+
+  const handleSelectSession = (id: string) => {
+    setCurrentSessionId(id);
+    if (window.innerWidth < 1024) setIsSidebarOpen(false);
   };
 
   const handleDeleteSession = async (id: string, e: React.MouseEvent) => {
@@ -215,9 +227,17 @@ export function AIAssistantView() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-12rem)] gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-14rem)] md:h-[calc(100vh-12rem)] gap-4 md:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
+      {/* Sidebar Overlay for mobile */}
+      {isSidebarOpen && window.innerWidth < 1024 && (
+        <div 
+          className="fixed inset-0 bg-[#050508]/80 backdrop-blur-sm z-30"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar - Chat History */}
-      <div className={`flex flex-col gap-4 transition-all duration-300 ${isSidebarOpen ? 'w-72' : 'w-0 overflow-hidden'}`}>
+      <div className={`flex flex-col gap-4 transition-all duration-300 fixed lg:relative z-40 lg:z-0 bg-[#0a0a0f] lg:bg-transparent h-full lg:h-auto p-6 lg:p-0 border-r lg:border-none border-white/5 ${isSidebarOpen ? 'w-72 left-0' : 'w-0 -left-72 lg:left-0 lg:w-0 overflow-hidden'}`}>
         <div className="flex items-center justify-between px-2">
           <div className="flex items-center gap-2">
             <History className="w-4 h-4 text-accent" />
@@ -235,7 +255,7 @@ export function AIAssistantView() {
           {sessions.map((session) => (
             <button
               key={session.id}
-              onClick={() => setCurrentSessionId(session.id)}
+              onClick={() => handleSelectSession(session.id)}
               className={`w-full text-left p-3 rounded-xl transition-all group relative flex items-center gap-3 border ${
                 currentSessionId === session.id 
                   ? 'bg-accent/10 border-accent/30 text-text-primary' 
@@ -262,27 +282,34 @@ export function AIAssistantView() {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 glass-card rounded-3xl flex flex-col overflow-hidden border-border-subtle hover:border-accent/20 transition-all">
+      <div className="flex-1 glass-card rounded-3xl flex flex-col overflow-hidden border-border-subtle hover:border-accent/20 transition-all relative">
         {/* Chat Header */}
-        <div className="px-6 py-4 border-b border-border-subtle flex items-center justify-between bg-white/5">
+        <div className="px-4 sm:px-6 py-4 border-b border-border-subtle flex items-center justify-between bg-white/5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-accent/10 flex items-center justify-center border border-accent/20">
+            <button 
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="lg:hidden p-2 -ml-2 text-slate-500 hover:text-white"
+            >
+              <History className="w-5 h-5" />
+            </button>
+            <div className="w-10 h-10 rounded-2xl bg-accent/10 sm:flex hidden items-center justify-center border border-accent/20">
               <Bot className="w-5 h-5 text-accent" />
             </div>
-            <div>
-              <h3 className="text-sm font-bold text-text-primary">KI Assistent</h3>
+            <div className="truncate">
+              <h3 className="text-sm font-bold text-text-primary truncate max-w-[120px] sm:max-w-none">KI Assistent</h3>
               <div className="flex items-center gap-2">
-                <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">Online • Gemini 3</p>
-                <span className="w-1 h-1 rounded-full bg-slate-500/30" />
-                <p className={`text-[10px] font-bold uppercase tracking-widest ${isAdmin ? 'text-accent' : 'text-text-secondary'}`}>
-                  {isAdmin ? 'Admin Zugriff' : 'Basis Zugriff'}
+                <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest hidden sm:inline">Online • Gemini 3</p>
+                <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest sm:hidden">Online</p>
+                <span className="w-1 h-1 rounded-full bg-slate-500/30 hidden sm:inline" />
+                <p className={`text-[10px] font-bold uppercase tracking-widest truncate ${isAdmin ? 'text-accent' : 'text-text-secondary'}`}>
+                  {isAdmin ? 'Admin' : 'Basis'}
                 </p>
               </div>
             </div>
           </div>
           <button 
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 hover:bg-input-bg rounded-xl text-text-secondary transition-all"
+            className="p-2 hover:bg-input-bg rounded-xl text-text-secondary transition-all hidden lg:block"
           >
             <Settings className="w-4 h-4" />
           </button>

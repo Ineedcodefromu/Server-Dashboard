@@ -173,9 +173,9 @@ service cloud.firestore {
     }
 
     match /projects/{projectId} {
-      allow read: if hasPermission('dashboard.view') || hasPermission('projects.view');
-      allow create, update: if hasPermission('projects.edit') && isValidProject(request.resource.data);
-      allow delete: if hasPermission('projects.edit');
+      allow read: if isSignedIn();
+      allow create, update: if (effectiveRole() == 'owner' || effectiveRole() == 'admin' || hasPermission('projects.edit')) && isValidProject(request.resource.data);
+      allow delete: if effectiveRole() == 'owner' || effectiveRole() == 'admin' || hasPermission('projects.edit');
     }
 
     match /snippets/{snippetId} {

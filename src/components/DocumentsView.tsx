@@ -11,7 +11,7 @@ import {
   collection, query, where, onSnapshot, addDoc, 
   deleteDoc, doc, serverTimestamp, orderBy 
 } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, auth, storage } from '../lib/firebase';
 import { useAuth } from '../lib/AuthContext';
 
@@ -78,18 +78,12 @@ export function DocumentsView() {
       const storagePath = `documents/${auth.currentUser.uid}/${Date.now()}_${file.name}`;
       const storageRef = ref(storage, storagePath);
       
-      const uploadTask = uploadBytesResumable(storageRef, file);
-
-      // Listen for progress and completion
-      uploadTask.on('state_changed', 
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          console.log('Upload is ' + progress + '% done');
-        }
-      );
-
-      const snapshot = await uploadTask;
+      console.log('Starting upload to:', storagePath);
+      // Use uploadBytes for simpler promise behavior in sandboxed environment
+      const snapshot = await uploadBytes(storageRef, file);
+      console.log('Upload complete, getting URL...');
       const downloadURL = await getDownloadURL(snapshot.ref);
+      console.log('URL obtained:', downloadURL);
 
       // 2. Save metadata to Firestore
       await addDoc(collection(db, 'documents'), {
@@ -108,7 +102,8 @@ export function DocumentsView() {
       }
     } catch (error: any) {
       console.error('Upload Error:', error);
-      alert('Fehler beim Hochladen: ' + (error.message || 'Unbekannter Fehler'));
+      // More descriptive error for debugging in the UI
+      alert('Fehler beim Hochladen: ' + (error.code || error.message || 'Unbekannter Fehler'));
     } finally {
       setIsUploading(false);
     }
@@ -205,19 +200,19 @@ export function DocumentsView() {
 
           <div className="space-y-4">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-text-secondary ml-2">Kategorien</h3>
-            <div className="flex flex-col gap-1">
+            <div className="flex md:flex-col gap-2 overflow-x-auto no-scrollbar pb-2 md:pb-0">
               {CATEGORIES.map(cat => (
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`w-full text-left px-4 py-3 rounded-xl transition-all font-bold text-xs flex items-center justify-between group ${
+                  className={`whitespace-nowrap px-4 py-3 rounded-xl transition-all font-bold text-xs flex items-center justify-between group shrink-0 md:shrink ${
                     activeCategory === cat 
                       ? 'bg-accent/10 text-accent border border-accent/20' 
                       : 'text-text-secondary hover:bg-input-bg border border-transparent'
                   }`}
                 >
                   {cat}
-                  <ChevronRight className={`w-3 h-3 transition-transform ${activeCategory === cat ? 'translate-x-1' : 'opacity-0 group-hover:opacity-100'}`} />
+                  <ChevronRight className={`w-3 h-3 hidden md:block transition-transform ${activeCategory === cat ? 'translate-x-1' : 'opacity-0 group-hover:opacity-100'}`} />
                 </button>
               ))}
             </div>
@@ -250,7 +245,7 @@ export function DocumentsView() {
             {viewMode === 'grid' ? (
               <motion.div 
                 layout
-                className="grid grid-cols-2 lg:grid-cols-3 gap-4"
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
               >
                 {filtered.map(doc => (
                   <motion.div

@@ -1,8 +1,14 @@
 import { useState, useEffect } from 'react';
-import { collection, query, onSnapshot, addDoc, updateDoc, doc, deleteDoc, serverTimestamp, orderBy } from 'firebase/firestore';
+import { 
+  collection, query, onSnapshot, addDoc, updateDoc, 
+  doc, deleteDoc, serverTimestamp 
+} from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { handleFirestoreError, OperationType } from '../lib/firestoreErrorHandler';
-import { Briefcase, Plus, MoreVertical, Clock, CheckCircle2, AlertCircle, PlayCircle, Lock, Trash2 } from 'lucide-react';
+import { 
+  Briefcase, Plus, MoreVertical, Clock, CheckCircle2, 
+  AlertCircle, PlayCircle, Lock, Trash2 
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../lib/AuthContext';
 
@@ -12,25 +18,48 @@ interface Project {
   description: string;
   status: 'planned' | 'active' | 'paused' | 'completed';
   progress: number;
+  createdAt?: any;
 }
 
 export function ProjectsView() {
-  const { effectiveRole, permissions } = useAuth();
+  const { effectiveRole, permissions, loading: authLoading } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [newProject, setNewProject] = useState({ title: '', description: '', status: 'planned', progress: 0 });
 
   const [editingProject, setEditingProject] = useState<Project | null>(null);
 
   useEffect(() => {
-    const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
+    // Remove orderBy to rule out missing index errors causing issues
+    const q = query(collection(db, 'projects'));
     const path = 'projects';
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
-      setProjects(docs);
+      try {
+        const docs = snapshot.docs.map(doc => ({ 
+          id: doc.id, 
+          ...doc.data() 
+        } as Project));
+        
+        // Sort in memory if needed
+        const sorted = docs.sort((a, b) => {
+          const timeA = a.createdAt?.seconds || 0;
+          const timeB = b.createdAt?.seconds || 0;
+          return timeB - timeA;
+        });
+        
+        setProjects(sorted);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error processing projects data:", err);
+        setLoading(false);
+      }
     }, (error) => {
       console.error('Projects subscription error:', error);
+      setLoading(false);
     });
+    
     return () => unsubscribe();
   }, []);
 
@@ -59,7 +88,7 @@ export function ProjectsView() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Bist du sicher, dass du dieses Projekt löschen möchtest?')) return;
+    if (!window.confirm('Bist du sicher, dass du dieses Projekt löschen möchtest?')) return;
     const path = 'projects';
     try {
       await deleteDoc(doc(db, path, id));
@@ -70,7 +99,12 @@ export function ProjectsView() {
 
   const startEdit = (p: Project) => {
     setEditingProject(p);
-    setNewProject({ title: p.title, description: p.description, status: p.status, progress: p.progress });
+    setNewProject({ 
+      title: p.title || '', 
+      description: p.description || '', 
+      status: p.status || 'planned', 
+      progress: p.progress || 0 
+    });
     setIsAdding(true);
   };
 
@@ -84,10 +118,10 @@ export function ProjectsView() {
     }
   };
 
-  const hasAccess = permissions.includes('projects.view') || effectiveRole === 'owner' || effectiveRole === 'admin';
-  const canEdit = permissions.includes('projects.edit') || effectiveRole === 'owner' || effectiveRole === 'admin';
+  const hasAccess = authLoading || (permissions && permissions.includes('projects.view')) || effectiveRole === 'owner' || effectiveRole === 'admin';
+  const canEdit = (permissions && permissions.includes('projects.edit')) || effectiveRole === 'owner' || effectiveRole === 'admin';
 
-  if (!hasAccess) {
+  if (!authLoading && !hasAccess) {
     return (
       <div className="flex flex-col items-center justify-center p-20 glass-card rounded-3xl border-rose-500/20 bg-rose-500/5">
         <Lock className="w-12 h-12 text-rose-500 mb-4" />
@@ -97,9 +131,17 @@ export function ProjectsView() {
     );
   }
 
+  if (loading && authLoading) {
+    return (
+      <div className="flex items-center justify-center p-20">
+        <div className="animate-spin w-8 h-8 border-2 border-accent border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center glass-card p-6 rounded-3xl">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 glass-card p-6 rounded-3xl">
         <div>
           <h2 className="text-2xl font-bold text-text-primary tracking-tight">Projekt-Übersicht</h2>
           <p className="text-text-secondary text-sm">Verwalte deine aktuellen Entwicklungsziele.</p>
@@ -111,7 +153,7 @@ export function ProjectsView() {
               setNewProject({ title: '', description: '', status: 'planned', progress: 0 });
               setIsAdding(true);
             }}
-            className="bg-accent text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:opacity-90 transition-all shadow-xl shadow-accent/20 active:scale-95"
+            className="w-full sm:w-auto bg-accent text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-xl shadow-accent/20 active:scale-95"
           >
             <Plus className="w-5 h-5" />
             Neues Projekt
@@ -127,7 +169,7 @@ export function ProjectsView() {
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <form onSubmit={handleCreate} className="bg-[#11111a]/80 backdrop-blur-2xl p-8 rounded-3xl border border-white/10 shadow-2xl space-y-4">
+            <form onSubmit={handleCreate} className="bg-[#11111a]/80 backdrop-blur-2xl p-4 sm:p-8 rounded-3xl border border-white/10 shadow-2xl space-y-4">
               <h3 className="text-xl font-bold text-white mb-4">
                 {editingProject ? 'Projekt bearbeiten' : 'Neues Projekt erstellen'}
               </h3>

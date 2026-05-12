@@ -209,7 +209,7 @@ function ProfileMenu() {
   );
 }
 
-function Sidebar({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (t: string) => void }) {
+function SidebarContent({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (t: string) => void }) {
   const { profile, permissions, effectiveRole } = useAuth();
   
   const menuItems = [
@@ -248,41 +248,34 @@ function Sidebar({ activeTab, setActiveTab }: { activeTab: string, setActiveTab:
   });
 
   return (
-    <div className="fixed left-0 top-0 h-screen w-20 bg-[#0a0a0f]/40 backdrop-blur-md border-r border-white/5 flex flex-col items-center py-8 z-20 overflow-y-auto no-scrollbar">
-      <div className="mb-10">
-        <div className="w-10 h-10 bg-gradient-to-br from-accent to-indigo-600 rounded-lg glow-accent flex items-center justify-center">
-          <Shield className="w-6 h-6 text-white" />
-        </div>
-      </div>
-      
-      <nav className="flex-1 flex flex-col gap-6">
-        {filteredItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setActiveTab(item.id)}
-            className={`p-3 rounded-xl transition-all duration-300 group relative ${
-              activeTab === item.id 
-                ? 'bg-accent/20 text-accent border border-accent/30' 
-                : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
-            }`}
-            title={item.label}
-          >
-            <item.icon className="w-6 h-6" />
-            {activeTab === item.id && (
-              <motion.div 
-                layoutId="active-pill"
-                className="absolute -right-1 top-1/2 -translate-y-1/2 w-1 h-6 bg-accent rounded-full"
-              />
-            )}
-          </button>
-        ))}
-      </nav>
-
-      <div className="mt-auto flex flex-col items-center gap-6">
-        <ProfileMenu />
-      </div>
-    </div>
+    <nav className="flex-1 flex flex-col gap-2 md:gap-6 w-full px-4 md:px-0">
+      {filteredItems.map((item) => (
+        <button
+          key={item.id}
+          onClick={() => setActiveTab(item.id)}
+          className={`p-3 md:p-3 rounded-xl transition-all duration-300 group relative flex items-center gap-4 md:justify-center ${
+            activeTab === item.id 
+              ? 'bg-accent/20 text-accent border border-accent/30' 
+              : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+          }`}
+          title={item.label}
+        >
+          <item.icon className="w-6 h-6 shrink-0" />
+          <span className="text-[10px] font-bold uppercase tracking-widest md:hidden">{item.label}</span>
+          {activeTab === item.id && (
+            <motion.div 
+              layoutId="active-pill"
+              className="absolute -right-4 md:-right-1 top-1/2 -translate-y-1/2 w-1 h-6 bg-accent rounded-full mb:mr-4"
+            />
+          )}
+        </button>
+      ))}
+    </nav>
   );
+}
+
+function Sidebar() {
+  return null; // Sidebar is integrated into AuthenticatedLayout now
 }
 
 // --- Page Views ---
@@ -343,37 +336,65 @@ function LoginPage() {
 
 function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (t: string) => void }) {
   const { profile, effectiveRole } = useAuth();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   return (
-    <div className="bg-[#050508] min-h-screen pl-20 relative overflow-hidden flex flex-col">
+    <div className="bg-[#050508] min-h-screen md:pl-20 relative overflow-hidden flex flex-col">
       {/* Decorative Orbs */}
       <div className="fixed top-[-100px] left-20 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px] pointer-events-none"></div>
       <div className="fixed bottom-[-100px] right-[-100px] w-[500px] h-[500px] bg-indigo-600/5 rounded-full blur-[120px] pointer-events-none"></div>
 
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      {/* Sidebar with Mobile Toggle */}
+      <div className={`fixed inset-0 bg-[#050508]/80 backdrop-blur-sm z-[30] md:hidden transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsSidebarOpen(false)} />
       
-      <header className="fixed top-0 right-0 left-20 h-16 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-white/5 z-10 px-8 flex items-center justify-between">
-        <div className="flex items-center gap-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-          <LayoutDashboard className="w-3 h-3" />
-          <span>Central Hub</span>
-          <span className="text-white/20">/</span>
-          <span className="text-accent">{activeTab}</span>
+      <div className={`fixed left-0 top-0 h-screen w-64 md:w-20 bg-[#0a0a0f]/90 md:bg-[#0a0a0f]/40 backdrop-blur-md border-r border-white/5 flex flex-col items-center py-8 z-[40] transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+        <div className="mb-10 flex items-center justify-between w-full px-6 md:px-0 md:justify-center">
+          <div className="w-10 h-10 bg-gradient-to-br from-accent to-indigo-600 rounded-lg glow-accent flex items-center justify-center">
+            <Shield className="w-6 h-6 text-white" />
+          </div>
+          <button onClick={() => setIsSidebarOpen(false)} className="md:hidden p-2 text-slate-500 hover:text-white">
+            <X className="w-6 h-6" />
+          </button>
         </div>
-        <div className="flex items-center gap-6">
+        
+        <SidebarContent activeTab={activeTab} setActiveTab={(t) => { setActiveTab(t); setIsSidebarOpen(false); }} />
+
+        <div className="mt-auto flex flex-col items-center gap-6 pb-4">
+          <ProfileMenu />
+        </div>
+      </div>
+      
+      <header className="fixed top-0 right-0 left-0 md:left-20 h-16 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-white/5 z-10 px-4 md:px-8 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-2 -ml-2 text-slate-500 hover:text-white md:hidden"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+          <div className="flex items-center gap-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate">
+            <LayoutDashboard className="w-3 h-3 shrink-0" />
+            <span className="hidden sm:inline">Central Hub</span>
+            <span className="text-white/20 hidden sm:inline">/</span>
+            <span className="text-accent truncate">{activeTab}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-4 md:gap-6">
           <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 rounded-full border border-green-500/20">
             <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-            <span className="text-[10px] uppercase font-bold text-green-400 tracking-wider">System Live</span>
+            <span className="text-[10px] uppercase font-bold text-green-400 tracking-wider hidden sm:inline">System Live</span>
+            <span className="text-[10px] uppercase font-bold text-green-400 tracking-wider sm:hidden">Live</span>
           </div>
 
           {(effectiveRole === 'admin' || effectiveRole === 'owner') && (
             <>
-              <div className="w-px h-6 bg-white/5" />
-              <div className="flex items-center gap-2">
+              <div className="w-px h-6 bg-white/5 hidden sm:block" />
+              <div className="hidden sm:flex items-center gap-2">
                 <div className="text-[10px] text-right">
                     <p className="text-white font-bold leading-tight uppercase">
-                      {effectiveRole === 'owner' ? 'Owner Console' : 'Admin Console'}
+                      {effectiveRole === 'owner' ? 'Owner' : 'Admin'}
                     </p>
-                    <p className="text-slate-600 leading-tight">v2.4.0-stable</p>
+                    <p className="text-slate-600 leading-tight">v2.4.0</p>
                 </div>
               </div>
             </>
@@ -381,7 +402,7 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
         </div>
       </header>
 
-      <main className="pt-24 p-8 flex-1 max-w-7xl w-full mx-auto relative z-10">
+      <main className="pt-24 p-4 md:p-8 flex-1 max-w-7xl w-full mx-auto relative z-10 overflow-x-hidden">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}

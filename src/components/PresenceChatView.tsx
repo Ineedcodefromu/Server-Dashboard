@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Send, Users, MessageSquare, Circle, 
   Trash2, Shield, User, Bot, Sparkles,
-  Hash, Image as ImageIcon, Smile
+  Hash, Image as ImageIcon, Smile, Plus
 } from 'lucide-react';
 import { 
   collection, query, where, onSnapshot, addDoc, 
@@ -46,6 +46,7 @@ export function PresenceChatView() {
   const [selectedContact, setSelectedContact] = useState<Member | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const isPowerful = effectiveRole === 'owner' || effectiveRole === 'admin';
@@ -173,22 +174,25 @@ export function PresenceChatView() {
   }, [messages]);
 
   return (
-    <div className="flex h-[calc(100vh-12rem)] gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-14rem)] md:h-[calc(100vh-12rem)] gap-4 md:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Sidebar - Members */}
-      <div className="w-1/4 flex flex-col gap-6">
+      <div className={`${showSidebar ? 'flex' : 'hidden'} lg:flex fixed lg:relative inset-0 lg:inset-auto z-20 lg:z-0 bg-[#050508] lg:bg-transparent p-4 lg:p-0 w-full lg:w-1/4 flex-col gap-6`}>
         <div className="glass-card rounded-3xl p-6 border-border-subtle hover:border-accent/20 transition-all flex flex-col h-full overflow-hidden">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-accent" />
               <h3 className="text-[10px] font-black uppercase tracking-widest text-text-secondary">Chats</h3>
             </div>
+            <button onClick={() => setShowSidebar(false)} className="lg:hidden p-2 -mr-2 text-slate-500">
+              <Plus className="w-6 h-6 rotate-45" />
+            </button>
           </div>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar space-y-6">
             {/* Global Chat Button */}
             {hasGlobalChat && (
               <button 
-                onClick={() => setSelectedContact(null)}
+                onClick={() => { setSelectedContact(null); setShowSidebar(false); }}
                 className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all ${
                   !selectedContact ? 'bg-accent/10 border border-accent/20' : 'hover:bg-white/5 border border-transparent'
                 }`}
@@ -209,7 +213,7 @@ export function PresenceChatView() {
                 {[...onlineMembers, ...offlineMembers].map(member => (
                   <button 
                     key={member.uid}
-                    onClick={() => setSelectedContact(member)}
+                    onClick={() => { setSelectedContact(member); setShowSidebar(false); }}
                     className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all ${
                       selectedContact?.uid === member.uid ? 'bg-accent/10 border border-accent/20' : 'hover:bg-white/5 border border-transparent'
                     }`}
@@ -235,15 +239,21 @@ export function PresenceChatView() {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 glass-card rounded-3xl flex flex-col overflow-hidden border-border-subtle hover:border-accent/20 transition-all">
+      <div className="flex-1 glass-card rounded-3xl flex flex-col overflow-hidden border-border-subtle hover:border-accent/20 transition-all relative">
         {/* Chat Header */}
         <div className="px-6 py-4 border-b border-border-subtle flex items-center justify-between bg-white/5">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-2xl bg-accent/5 flex items-center justify-center border border-accent/10">
+            <button 
+              onClick={() => setShowSidebar(true)}
+              className="lg:hidden p-2 -ml-2 text-slate-500 hover:text-white"
+            >
+              <Users className="w-5 h-5" />
+            </button>
+            <div className="w-10 h-10 rounded-2xl bg-accent/5 flex items-center justify-center border border-accent/10 sm:flex hidden">
               {selectedContact ? <User className="w-5 h-5 text-accent" /> : <Hash className="w-5 h-5 text-accent" />}
             </div>
             <div>
-              <h3 className="text-sm font-bold text-text-primary uppercase tracking-widest">
+              <h3 className="text-sm font-bold text-text-primary uppercase tracking-widest truncate max-w-[150px] sm:max-w-none">
                 {selectedContact ? selectedContact.displayName : 'Team Chat'}
               </h3>
               <p className="text-[9px] text-text-secondary font-medium tracking-tight">
