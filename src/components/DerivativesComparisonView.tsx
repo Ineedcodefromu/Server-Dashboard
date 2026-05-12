@@ -124,12 +124,12 @@ export function DerivativesComparisonView() {
                     <div className="md:col-span-3 grid grid-cols-2 gap-2">
                       <div className="p-2 bg-white/5 rounded-xl border border-white/5">
                         <p className="text-[8px] uppercase text-text-secondary font-bold">Stück</p>
-                        <p className="text-sm font-bold text-white">{units.toLocaleString()}</p>
+                        <p className="text-sm font-bold text-white">{units.toLocaleString('de-DE')}</p>
                       </div>
                       <div className={`p-2 rounded-xl border ${profit >= 0 ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-rose-500/10 border-rose-500/20'}`}>
                         <p className="text-[8px] uppercase text-text-secondary font-bold">Gewinn</p>
                         <p className={`text-sm font-bold ${profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                          {profit >= 0 ? '+' : ''}{profit.toFixed(2)}€
+                          {profit >= 0 ? '+' : ''}{profit.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
                         </p>
                       </div>
                     </div>
@@ -183,7 +183,7 @@ export function DerivativesComparisonView() {
                       </div>
                       <span className="text-xs font-bold text-white truncate max-w-[100px]">{deriv.name}</span>
                     </div>
-                    <span className="text-emerald-400 font-bold text-sm">+{profit.toFixed(2)}€</span>
+                    <span className="text-emerald-400 font-bold text-sm">+{profit.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€</span>
                   </div>
                 );
               })}
@@ -197,7 +197,7 @@ export function DerivativesComparisonView() {
               <div className="flex justify-between items-center text-xs">
                 <span className="text-text-secondary">Max. Potenzieller Gewinn</span>
                 <span className="text-emerald-400 font-bold">
-                  {Math.max(...derivatives.map(d => calculateResults(d.entryPrice, d.priceIncrease).profit)).toFixed(2)}€
+                  {Math.max(...derivatives.map(d => calculateResults(d.entryPrice, d.priceIncrease).profit)).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€
                 </span>
               </div>
             </div>

@@ -213,7 +213,7 @@ export function KanbanView() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
+    <div className="space-y-8">
       <div className="flex flex-col gap-1">
         <h2 className="text-3xl font-bold text-text-primary tracking-tight">Aufgabenplanung</h2>
         <p className="text-text-secondary text-sm">Organisiere deine Workflows mit dem Kanban-System.</p>

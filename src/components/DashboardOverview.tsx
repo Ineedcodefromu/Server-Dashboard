@@ -74,7 +74,7 @@ export function DashboardOverview() {
   }, []);
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
+    <div className="space-y-8">
       <div className="flex flex-col gap-1">
         <h2 className="text-3xl font-bold text-white tracking-tight">Willkommen zurück, {profile?.displayName?.split(' ')[0] || 'User'}</h2>
         <p className="text-slate-500 text-sm">Dashboard Status: <span className="text-green-500 font-medium">System Online</span> • Alle Module bereit.</p>
@@ -141,9 +141,9 @@ export function DashboardOverview() {
                     </div>
                   </div>
                   <span className="text-[10px] font-mono text-slate-500 shrink-0 ml-4">
-                    {n.timestamp instanceof Date ? n.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 
-                     n.timestamp?.toDate ? n.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 
-                     new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {n.timestamp instanceof Date ? n.timestamp.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : 
+                     n.timestamp?.toDate ? n.timestamp.toDate().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : 
+                     new Date(n.timestamp).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
               ))

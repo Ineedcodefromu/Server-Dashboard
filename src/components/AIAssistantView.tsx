@@ -227,7 +227,7 @@ export function AIAssistantView() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-14rem)] md:h-[calc(100vh-12rem)] gap-4 md:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 relative">
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-14rem)] md:h-[calc(100vh-12rem)] gap-4 md:gap-6 relative">
       {/* Sidebar Overlay for mobile */}
       {isSidebarOpen && window.innerWidth < 1024 && (
         <div 

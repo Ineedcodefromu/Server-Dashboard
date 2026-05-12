@@ -174,7 +174,7 @@ export function PresenceChatView() {
   }, [messages]);
 
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-14rem)] md:h-[calc(100vh-12rem)] gap-4 md:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-14rem)] md:h-[calc(100vh-12rem)] gap-4 md:gap-6">
       {/* Sidebar - Members */}
       <div className={`${showSidebar ? 'flex' : 'hidden'} lg:flex fixed lg:relative inset-0 lg:inset-auto z-50 lg:z-0 bg-[#050508] lg:bg-transparent p-4 lg:p-0 w-full lg:w-1/4 flex-col gap-6`}>
         <div className="glass-card rounded-3xl p-6 border-border-subtle hover:border-accent/20 transition-all flex flex-col h-full overflow-hidden">

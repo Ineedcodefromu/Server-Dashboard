@@ -173,11 +173,13 @@ export function StocksView() {
 
               <div className="flex items-baseline gap-2">
                 <p className="text-3xl font-black text-text-primary tracking-tight">
-                  {currency === 'EUR' ? `${stock.priceEUR}€` : `$${stock.price}`}
+                  {currency === 'EUR' 
+                    ? `${Number(stock.priceEUR).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€` 
+                    : `$${Number(stock.price).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                 </p>
                 <div className={`flex items-center gap-1 text-sm font-bold ${Number(stock.change) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                   {Number(stock.change) >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                  {stock.changePercent}%
+                  {Number(stock.changePercent).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
                 </div>
               </div>
 
@@ -189,7 +191,7 @@ export function StocksView() {
                    className={`h-full ${Number(stock.change) >= 0 ? 'bg-green-500' : 'bg-red-500'} opacity-20`}
                  />
               </div>
-              <p className="text-[10px] text-text-secondary mt-2 font-medium">Zuletzt aktualisiert: {new Date(stock.updatedAt).toLocaleTimeString()}</p>
+              <p className="text-[10px] text-text-secondary mt-2 font-medium">Zuletzt aktualisiert: {new Date(stock.updatedAt).toLocaleTimeString('de-DE')}</p>
             </motion.div>
           ))
         )}

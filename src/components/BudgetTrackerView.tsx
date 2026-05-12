@@ -145,7 +145,7 @@ export function BudgetTrackerView() {
   }));
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
+    <div className="space-y-8">
       {/* Header & Stats */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
