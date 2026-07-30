@@ -7,7 +7,7 @@ import {
   RefreshCw, Info, HelpCircle, ArrowRight, Copy, Check
 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
-import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 interface Transaction {
@@ -32,10 +32,12 @@ const CURRENCIES = [
 ];
 
 export function PayPalPaymentView() {
-  const { user } = useAuth();
+  const { user, effectiveRole } = useAuth();
+  const isOwner = effectiveRole === 'owner' || effectiveRole === 'admin' || user?.email === 'mathewsniko02@gmail.com';
   
   // Mode selection: 'friends' (Freunde & Familie) vs 'sdk' (Waren & Dienstleistungen)
   const [paymentMode, setPaymentMode] = useState<'friends' | 'sdk'>('friends');
+  const [enableOfficialCheckout, setEnableOfficialCheckout] = useState<boolean>(true);
 
   // Selection states
   const [selectedPreset, setSelectedPreset] = useState<number | 'custom'>(25);
@@ -52,6 +54,31 @@ export function PayPalPaymentView() {
   const [paypalMeUsername, setPaypalMeUsername] = useState<string>(() => {
     return localStorage.getItem('paypal_me_username') || '';
   });
+
+  // Sync PayPal settings from Firestore in real time
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'app_settings', 'paypal'), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (typeof data.enableOfficialCheckout === 'boolean') {
+          setEnableOfficialCheckout(data.enableOfficialCheckout);
+          if (!data.enableOfficialCheckout) {
+            setPaymentMode('friends');
+          }
+        }
+        if (data.clientId) {
+          setClientId(data.clientId);
+          setTempClientId(data.clientId);
+        }
+        if (data.paypalMeUsername !== undefined) {
+          setPaypalMeUsername(data.paypalMeUsername);
+        }
+      }
+    }, (err) => {
+      console.warn("Could not listen to paypal settings:", err);
+    });
+    return () => unsub();
+  }, []);
   
   // Transaction processing states
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
@@ -90,13 +117,29 @@ export function PayPalPaymentView() {
   const finalAmount = getFinalAmountNumber();
   const currentSymbol = CURRENCIES.find(c => c.code === currency)?.symbol || '$';
 
-  // Save config changes
-  const handleSaveConfig = (e: React.FormEvent) => {
+  // Save config changes (Owner only)
+  const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isOwner) return;
+
     const cleaned = tempClientId.trim() || 'test';
+    const cleanedUsername = paypalMeUsername.trim();
+
     setClientId(cleaned);
     localStorage.setItem('paypal_client_id', cleaned);
-    localStorage.setItem('paypal_me_username', paypalMeUsername.trim());
+    localStorage.setItem('paypal_me_username', cleanedUsername);
+
+    try {
+      await setDoc(doc(db, 'app_settings', 'paypal'), {
+        clientId: cleaned,
+        paypalMeUsername: cleanedUsername,
+        enableOfficialCheckout: enableOfficialCheckout,
+        updatedAt: Date.now(),
+        updatedBy: user?.email || 'owner'
+      }, { merge: true });
+    } catch (err) {
+      console.error("Error saving paypal settings:", err);
+    }
     setShowConfig(false);
   };
 
@@ -156,20 +199,22 @@ export function PayPalPaymentView() {
           </p>
         </div>
 
-        <button 
-          onClick={() => {
-            setTempClientId(clientId);
-            setShowConfig(!showConfig);
-          }}
-          className="flex items-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 active:scale-95 text-xs text-slate-300 font-bold uppercase tracking-wider rounded-xl border border-white/10 transition-all self-start md:self-auto"
-        >
-          <Settings className="w-4 h-4 text-accent" />
-          {showConfig ? 'Close Configuration' : 'PayPal Settings'}
-        </button>
+        {isOwner && (
+          <button 
+            onClick={() => {
+              setTempClientId(clientId);
+              setShowConfig(!showConfig);
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 active:scale-95 text-xs text-slate-300 font-bold uppercase tracking-wider rounded-xl border border-white/10 transition-all self-start md:self-auto"
+          >
+            <Settings className="w-4 h-4 text-accent" />
+            {showConfig ? 'Schließen' : 'PayPal Einstellungen (Owner)'}
+          </button>
+        )}
       </div>
 
       {/* Mode Selection Tabs: Friends & Family (Fee-Free) vs Commercial SDK */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className={`grid grid-cols-1 ${enableOfficialCheckout ? 'sm:grid-cols-2' : ''} gap-4`}>
         <button
           type="button"
           onClick={() => setPaymentMode('friends')}
@@ -197,37 +242,39 @@ export function PayPalPaymentView() {
           </div>
         </button>
 
-        <button
-          type="button"
-          onClick={() => setPaymentMode('sdk')}
-          className={`p-4 rounded-2xl border transition-all text-left flex items-start gap-3 ${
-            paymentMode === 'sdk'
-              ? 'bg-gradient-to-br from-[#0070BA]/20 via-[#003087]/20 to-transparent border-[#0070BA] shadow-[0_0_20px_rgba(0,112,186,0.15)]'
-              : 'bg-white/2 hover:bg-white/5 border-white/5 text-slate-400'
-          }`}
-        >
-          <div className={`p-2.5 rounded-xl ${paymentMode === 'sdk' ? 'bg-[#0070BA] text-white' : 'bg-white/5 text-slate-400'}`}>
-            <CreditCard className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className={`text-sm font-black ${paymentMode === 'sdk' ? 'text-white' : 'text-slate-300'}`}>
-                Offizieller Checkout
-              </span>
-              <span className="text-[9px] bg-[#0070BA]/20 text-[#0070BA] border border-[#0070BA]/30 px-2 py-0.5 rounded-full font-black uppercase">
-                Waren & Dienstleistungen
-              </span>
+        {enableOfficialCheckout && (
+          <button
+            type="button"
+            onClick={() => setPaymentMode('sdk')}
+            className={`p-4 rounded-2xl border transition-all text-left flex items-start gap-3 ${
+              paymentMode === 'sdk'
+                ? 'bg-gradient-to-br from-[#0070BA]/20 via-[#003087]/20 to-transparent border-[#0070BA] shadow-[0_0_20px_rgba(0,112,186,0.15)]'
+                : 'bg-white/2 hover:bg-white/5 border-white/5 text-slate-400'
+            }`}
+          >
+            <div className={`p-2.5 rounded-xl ${paymentMode === 'sdk' ? 'bg-[#0070BA] text-white' : 'bg-white/5 text-slate-400'}`}>
+              <CreditCard className="w-5 h-5" />
             </div>
-            <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-              Direktes Kreditkarten/PayPal Overlay auf der Website mit Käuferschutz & Gebühren.
-            </p>
-          </div>
-        </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className={`text-sm font-black ${paymentMode === 'sdk' ? 'text-white' : 'text-slate-300'}`}>
+                  Offizieller Checkout
+                </span>
+                <span className="text-[9px] bg-[#0070BA]/20 text-[#0070BA] border border-[#0070BA]/30 px-2 py-0.5 rounded-full font-black uppercase">
+                  Waren & Dienstleistungen
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                Direktes Kreditkarten/PayPal Overlay auf der Website mit Käuferschutz & Gebühren.
+              </p>
+            </div>
+          </button>
+        )}
       </div>
 
-      {/* Configuration Modal / Accordion */}
+      {/* Configuration Modal / Accordion (Owner Only) */}
       <AnimatePresence>
-        {showConfig && (
+        {showConfig && isOwner && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
@@ -237,11 +284,36 @@ export function PayPalPaymentView() {
             <form onSubmit={handleSaveConfig} className="p-6 bg-[#0c1017] rounded-3xl border border-[#0070BA]/30 space-y-4">
               <div className="flex items-center gap-2 text-[#0070BA] font-black text-xs uppercase tracking-widest">
                 <Settings className="w-4 h-4" />
-                PayPal Developer Integration Settings
+                PayPal globale Einstellungen (Owner)
               </div>
               <p className="text-xs text-slate-400">
-                To receive payments directly into your personal or business PayPal account, enter your <strong>PayPal REST API Client ID</strong> from the <a href="https://developer.paypal.com/developer/applications" target="_blank" rel="noreferrer" className="text-accent underline font-bold">PayPal Developer Portal</a>. Leave as <code className="text-amber-400">test</code> to use PayPal Sandbox overlay mode.
+                Hier kannst du den Client ID Schlüssel und die Methoden für alle Besucher der Website steuern.
               </p>
+
+              {/* Toggle for Official Checkout */}
+              <div className="p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between gap-4">
+                <div>
+                  <span className="text-xs font-bold text-white block">
+                    Offizieller Checkout (Waren & Dienstleistungen) anzeigen
+                  </span>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Wenn deaktiviert, ist die Option "Offizieller Checkout" für alle Nutzer unsichtbar und es ist nur "Freunde & Familie" (0% Gebühren) aktiv.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEnableOfficialCheckout(!enableOfficialCheckout)}
+                  className={`w-12 h-6 rounded-full p-1 transition-all ${
+                    enableOfficialCheckout ? 'bg-[#0070BA]' : 'bg-slate-700'
+                  } relative shrink-0`}
+                >
+                  <div 
+                    className={`w-4 h-4 bg-white rounded-full transition-transform ${
+                      enableOfficialCheckout ? 'translate-x-6' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                 <div>

@@ -15,7 +15,7 @@ import {
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import { auth, db } from './lib/firebase';
 import { signOut, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
 import { PresenceChatView } from './components/PresenceChatView';
 import { BudgetTrackerView } from './components/BudgetTrackerView';
 import { CustomDashboard } from './components/CustomDashboard';
@@ -88,9 +88,10 @@ function ProfileMenu() {
   const updateCoords = () => {
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
+      const isMobile = window.innerWidth < 768;
       setCoords({
-        left: rect.right + 12,
-        bottom: window.innerHeight - rect.bottom
+        left: isMobile ? Math.min(rect.left + 8, window.innerWidth - 270) : rect.right + 16,
+        bottom: Math.max(16, window.innerHeight - rect.bottom)
       });
     }
   };
@@ -107,44 +108,52 @@ function ProfileMenu() {
   const isEmulating = effectiveRole !== profile.role;
 
   return (
-    <div className="relative">
+    <div className="relative w-full flex items-center justify-center">
       <button 
         ref={buttonRef}
         onClick={toggleMenu}
-        className={`w-10 h-10 rounded-full border p-0.5 shrink-0 transition-all duration-300 relative group overflow-visible ${
+        className={`w-full md:w-11 h-11 p-2 md:p-0.5 rounded-2xl border shrink-0 transition-all duration-300 relative group flex items-center gap-3 md:justify-center ${
           isEmulating 
-            ? 'border-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)]' 
-            : 'border-white/10 hover:border-accent/50'
+            ? 'border-amber-500 bg-amber-500/10 shadow-[0_0_10px_rgba(245,158,11,0.3)]' 
+            : 'border-white/10 hover:border-accent/50 bg-white/5 hover:bg-white/10'
         }`}
+        title="Profil & Account"
       >
-        <img 
-          src={`https://ui-avatars.com/api/?name=${encodeURIComponent(profile.displayName || 'User')}&background=020617&color=fff`} 
-          alt="Avatar" 
-          className="w-full h-full rounded-full bg-slate-700 object-cover" 
-        />
-        {isEmulating && (
-          <div className="absolute -top-1 -right-1 w-3 h-3 bg-amber-500 rounded-full border-2 border-[#11111a] z-10" />
-        )}
+        <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 relative">
+          <img 
+            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(profile.displayName || 'User')}&background=020617&color=fff`} 
+            alt="Avatar" 
+            className="w-full h-full object-cover" 
+          />
+          {isEmulating && (
+            <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-amber-500 rounded-full border-2 border-[#11111a] z-10" />
+          )}
+        </div>
+        
+        <div className="flex flex-col text-left min-w-0 flex-1 md:hidden">
+          <span className="text-xs font-bold text-white truncate leading-tight">{profile.displayName}</span>
+          <span className="text-[10px] text-slate-400 truncate leading-tight uppercase font-mono">{effectiveRole}</span>
+        </div>
       </button>
 
       {isOpen && createPortal(
         <>
-          <div className="fixed inset-0 z-[100]" onClick={() => setIsOpen(false)} />
+          <div className="fixed inset-0 z-[300]" onClick={() => setIsOpen(false)} />
           <motion.div 
             initial={{ opacity: 0, x: -10, scale: 0.95 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: -10, scale: 0.95 }}
             style={{ 
               position: 'fixed',
-              left: coords.left,
+              left: Math.max(12, coords.left),
               bottom: coords.bottom,
-              zIndex: 101
+              zIndex: 301
             }}
-            className="w-64 bg-[#0a0a0f] border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden backdrop-blur-2xl"
+            className="w-64 bg-[#0a0a0f] border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden backdrop-blur-2xl"
           >
             <div className="p-4 border-b border-white/5 bg-white/2">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
                   <UserIcon className="w-5 h-5 text-accent" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -213,7 +222,7 @@ function ProfileMenu() {
   );
 }
 
-function SidebarContent({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (t: string) => void }) {
+function SidebarContent({ activeTab, setActiveTab, navConfig }: { activeTab: string, setActiveTab: (t: string) => void, navConfig: Record<string, boolean> }) {
   const { profile, permissions, effectiveRole } = useAuth();
   
   const menuItems = [
@@ -232,6 +241,10 @@ function SidebarContent({ activeTab, setActiveTab }: { activeTab: string, setAct
   ];
 
   const filteredItems = menuItems.filter(item => {
+    // 1. Check if globally disabled by Owner in real-time
+    if (navConfig[item.id] === true) return false;
+
+    // 2. Check roles & permissions
     const isPowerful = effectiveRole === 'admin' || effectiveRole === 'owner';
     if (item.adminOnly && !isPowerful) return false;
     
@@ -337,7 +350,27 @@ function LoginPage() {
 function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, setActiveTab: (t: string) => void }) {
   const { profile, effectiveRole } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  
+  const [navConfig, setNavConfig] = useState<Record<string, boolean>>({});
+
+  // Real-time synchronization of disabled tabs from Firestore
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'app_settings', 'navigation'), (snap) => {
+      if (snap.exists()) {
+        setNavConfig(snap.data().disabledTabs || {});
+      }
+    }, (err) => {
+      console.warn("Could not listen to navigation settings:", err);
+    });
+    return () => unsub();
+  }, []);
+
+  // Redirect if currently selected tab gets disabled in real-time
+  useEffect(() => {
+    if (navConfig[activeTab] === true) {
+      setActiveTab('custom');
+    }
+  }, [activeTab, navConfig, setActiveTab]);
+
   return (
     <div className="bg-[#050508] min-h-screen md:pl-20 relative flex flex-col">
       {/* Decorative Orbs */}
@@ -357,7 +390,11 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
           </button>
         </div>
         
-        <SidebarContent activeTab={activeTab} setActiveTab={(t) => { setActiveTab(t); setIsSidebarOpen(false); }} />
+        <SidebarContent activeTab={activeTab} setActiveTab={(t) => { setActiveTab(t); setIsSidebarOpen(false); }} navConfig={navConfig} />
+
+        <div className="mt-auto pt-6 px-4 md:px-3 w-full border-t border-white/5 flex items-center justify-center">
+          <ProfileMenu />
+        </div>
       </div>
       
       <header className="fixed top-0 right-0 left-0 md:left-20 h-20 bg-[#0a0a0f]/90 backdrop-blur-2xl border-b border-white/5 z-[100] px-4 md:px-8 flex items-center justify-between">
@@ -393,19 +430,17 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
             <span className="text-[10px] uppercase font-black text-green-400 tracking-wider sm:hidden">Live</span>
           </div>
 
-          <div className="w-px h-8 bg-white/5 hidden sm:block" />
-          
-          <div className="flex items-center gap-4">
-            {(effectiveRole === 'admin' || effectiveRole === 'owner') && (
-              <div className="hidden xl:block text-right">
+          {(effectiveRole === 'admin' || effectiveRole === 'owner') && (
+            <>
+              <div className="w-px h-8 bg-white/5 hidden sm:block" />
+              <div className="hidden sm:block text-right">
                 <p className="text-[10px] text-white font-black leading-tight uppercase tracking-widest">
                   {effectiveRole === 'owner' ? 'Owner Console' : 'Admin Console'}
                 </p>
                 <p className="text-[9px] text-slate-600 leading-tight font-mono">v2.4.0-STABLE</p>
               </div>
-            )}
-            <ProfileMenu />
-          </div>
+            </>
+          )}
         </div>
       </header>
 

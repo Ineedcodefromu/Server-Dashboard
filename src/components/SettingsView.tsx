@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, updateDoc, doc, deleteDoc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { handleFirestoreError, OperationType } from '../lib/firestoreErrorHandler';
 import { 
@@ -19,7 +19,16 @@ import {
   Save,
   Moon,
   Sun,
-  Laptop
+  Laptop,
+  CreditCard,
+  Sparkles,
+  Columns,
+  FileBox,
+  Briefcase,
+  Code,
+  BarChart3,
+  Terminal,
+  Users
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../lib/AuthContext';
@@ -32,9 +41,24 @@ interface SystemUser {
   permissions: string[];
 }
 
+const CONFIGURABLE_TABS = [
+  { id: 'paypal', name: 'PayPal Checkout', desc: 'PayPal Zahlungen, QR-Code & Überweisungen', icon: CreditCard },
+  { id: 'ai', name: 'AI Assistent', desc: 'Künstliche Intelligenz Chat & Assistent', icon: Sparkles },
+  { id: 'kanban', name: 'Kanban Board', desc: 'Aufgaben- & Projekt-Board', icon: Columns },
+  { id: 'documents', name: 'Dokumente', desc: 'Dateiverwaltung & Dokumenten-Archiv', icon: FileBox },
+  { id: 'notifications', name: 'Alerts', desc: 'System-Benachrichtigungen & Warnungen', icon: Bell },
+  { id: 'projects', name: 'Projekte', desc: 'Projektverwaltung & Meilensteine', icon: Briefcase },
+  { id: 'code', name: 'Code Studio', desc: 'Entwickler Tools & Code Snippets', icon: Code },
+  { id: 'performance', name: 'Leistung', desc: 'System-Performance & Metriken', icon: BarChart3 },
+  { id: 'logs', name: 'System Logs', desc: 'System-Protokolle & Terminal Logs', icon: Terminal },
+  { id: 'users', name: 'Team-Verwaltung', desc: 'Benutzer- & Rechteverwaltung', icon: Users },
+];
+
 export function SettingsView() {
-  const { profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'profile' | 'appearance' | 'notifications'>('profile');
+  const { profile, effectiveRole } = useAuth();
+  const isOwner = effectiveRole === 'owner' || effectiveRole === 'admin' || profile?.email === 'mathewsniko02@gmail.com';
+  
+  const [activeTab, setActiveTab] = useState<'profile' | 'appearance' | 'notifications' | 'website'>('profile');
   const [displayName, setDisplayName] = useState(profile?.displayName || '');
   const [isSaving, setIsSaving] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
@@ -51,12 +75,49 @@ export function SettingsView() {
     email: true
   });
 
+  // Website Navigation & Global Config States (Owner/Admin only)
+  const [disabledTabs, setDisabledTabs] = useState<Record<string, boolean>>({});
+  const [enableOfficialCheckout, setEnableOfficialCheckout] = useState<boolean>(true);
+  const [paypalClientId, setPaypalClientId] = useState<string>('test');
+  const [paypalUsername, setPaypalUsername] = useState<string>('');
+  const [savingWebSettings, setSavingWebSettings] = useState(false);
+  const [webSettingsSaved, setWebSettingsSaved] = useState(false);
+
   useEffect(() => {
     if (profile?.displayName) setDisplayName(profile.displayName);
     if (profile?.theme) setTheme(profile.theme);
     if (profile?.accentColor) setAccentColor(profile.accentColor);
     if (profile?.notifications) setNotifications(profile.notifications);
   }, [profile]);
+
+  // Real-time listener for global navigation & PayPal settings
+  useEffect(() => {
+    if (!isOwner) return;
+
+    const unsubNav = onSnapshot(doc(db, 'app_settings', 'navigation'), (snap) => {
+      if (snap.exists()) {
+        setDisabledTabs(snap.data().disabledTabs || {});
+      }
+    }, (err) => {
+      console.warn("Could not listen to navigation settings:", err);
+    });
+
+    const unsubPaypal = onSnapshot(doc(db, 'app_settings', 'paypal'), (snap) => {
+      if (snap.exists()) {
+        const d = snap.data();
+        if (typeof d.enableOfficialCheckout === 'boolean') setEnableOfficialCheckout(d.enableOfficialCheckout);
+        if (d.clientId) setPaypalClientId(d.clientId);
+        if (d.paypalMeUsername !== undefined) setPaypalUsername(d.paypalMeUsername);
+      }
+    }, (err) => {
+      console.warn("Could not listen to paypal settings:", err);
+    });
+
+    return () => {
+      unsubNav();
+      unsubPaypal();
+    };
+  }, [isOwner]);
 
   const handleUpdateProfile = async () => {
     if (!profile) return;
@@ -78,10 +139,84 @@ export function SettingsView() {
     }
   };
 
+  const handleSaveWebsiteSettings = async () => {
+    if (!isOwner) return;
+    setSavingWebSettings(true);
+    try {
+      await setDoc(doc(db, 'app_settings', 'navigation'), {
+        disabledTabs: disabledTabs,
+        updatedAt: Date.now(),
+        updatedBy: profile?.email || 'owner'
+      }, { merge: true });
+
+      await setDoc(doc(db, 'app_settings', 'paypal'), {
+        enableOfficialCheckout: enableOfficialCheckout,
+        clientId: paypalClientId.trim() || 'test',
+        paypalMeUsername: paypalUsername.trim(),
+        updatedAt: Date.now(),
+        updatedBy: profile?.email || 'owner'
+      }, { merge: true });
+
+      setWebSettingsSaved(true);
+      setTimeout(() => setWebSettingsSaved(false), 2000);
+    } catch (err) {
+      console.error("Error saving website settings:", err);
+      handleFirestoreError(err, OperationType.WRITE, 'app_settings/navigation');
+    } finally {
+      setSavingWebSettings(false);
+    }
+  };
+
+  const toggleTabState = async (tabId: string) => {
+    const updated = {
+      ...disabledTabs,
+      [tabId]: !disabledTabs[tabId]
+    };
+    setDisabledTabs(updated);
+
+    if (isOwner) {
+      try {
+        await setDoc(doc(db, 'app_settings', 'navigation'), {
+          disabledTabs: updated,
+          updatedAt: Date.now(),
+          updatedBy: profile?.email || 'owner'
+        }, { merge: true });
+        setWebSettingsSaved(true);
+        setTimeout(() => setWebSettingsSaved(false), 1500);
+      } catch (err) {
+        console.error("Error updating navigation tab state:", err);
+        handleFirestoreError(err, OperationType.WRITE, 'app_settings/navigation');
+      }
+    }
+  };
+
+  const toggleOfficialCheckout = async () => {
+    const nextVal = !enableOfficialCheckout;
+    setEnableOfficialCheckout(nextVal);
+
+    if (isOwner) {
+      try {
+        await setDoc(doc(db, 'app_settings', 'paypal'), {
+          enableOfficialCheckout: nextVal,
+          clientId: paypalClientId.trim() || 'test',
+          paypalMeUsername: paypalUsername.trim(),
+          updatedAt: Date.now(),
+          updatedBy: profile?.email || 'owner'
+        }, { merge: true });
+        setWebSettingsSaved(true);
+        setTimeout(() => setWebSettingsSaved(false), 1500);
+      } catch (err) {
+        console.error("Error updating paypal checkout setting:", err);
+        handleFirestoreError(err, OperationType.WRITE, 'app_settings/paypal');
+      }
+    }
+  };
+
   const tabs = [
     { id: 'profile', label: 'Profil', icon: User },
     { id: 'appearance', label: 'Erscheinungsbild', icon: Palette },
     { id: 'notifications', label: 'Benachrichtigungen', icon: Bell },
+    ...(isOwner ? [{ id: 'website', label: 'Website Einstellungen', icon: Globe }] : [])
   ];
 
   return (
@@ -254,8 +389,162 @@ export function SettingsView() {
             </div>
           )}
 
-          {/* Bottom Save Action */}
-          <div className="flex justify-start">
+          {activeTab === 'website' && isOwner && (
+            <div className="max-w-4xl space-y-8">
+              {/* Card 1: Sidebar Navigation Tabs Control */}
+              <div className="bg-card-bg p-8 rounded-3xl border border-border-subtle space-y-6">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-5 h-5 text-accent" />
+                    <h3 className="text-lg font-bold text-white uppercase tracking-tight">Globale Seiten-Navigation (Echtzeit)</h3>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Aktiviere oder deaktiviere hier Reiter der Website. Sobald du einen Reiter einschränkst, wird dieser in <strong>Echtzeit für ALLE aktiven Nutzer</strong> auf der Website ausgeblendet.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                  {CONFIGURABLE_TABS.map((item) => {
+                    const isDisabled = disabledTabs[item.id] === true;
+                    const IconComp = item.icon;
+                    return (
+                      <div 
+                        key={item.id} 
+                        className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
+                          !isDisabled 
+                            ? 'bg-input-bg border-border-subtle' 
+                            : 'bg-red-500/5 border-red-500/20 opacity-75'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2.5 rounded-xl ${!isDisabled ? 'bg-accent/10 text-accent' : 'bg-red-500/10 text-red-400'}`}>
+                            <IconComp className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold text-text-primary tracking-tight">{item.name}</span>
+                              {isDisabled && (
+                                <span className="text-[9px] bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full font-black uppercase">
+                                  Inaktiv
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-text-secondary leading-tight mt-0.5">{item.desc}</p>
+                          </div>
+                        </div>
+
+                        <button 
+                          type="button"
+                          onClick={() => toggleTabState(item.id)}
+                          className={`w-12 h-6 rounded-full p-1 transition-all ${
+                            !isDisabled ? 'bg-accent' : 'bg-slate-700'
+                          } relative shrink-0`}
+                        >
+                          <motion.div 
+                            initial={false}
+                            animate={{ x: !isDisabled ? 24 : 0 }}
+                            className="w-4 h-4 bg-white rounded-full shadow-sm"
+                          />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Card 2: PayPal Global Configuration */}
+              <div className="bg-card-bg p-8 rounded-3xl border border-border-subtle space-y-6">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-5 h-5 text-[#0070BA]" />
+                    <h3 className="text-lg font-bold text-white uppercase tracking-tight">Globale PayPal Einstellungen</h3>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Verwalte den PayPal Checkout-Modus und API-Schlüssel global für das gesamte System.
+                  </p>
+                </div>
+
+                <div className="p-4 bg-input-bg border border-border-subtle rounded-2xl flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-bold text-text-primary tracking-tight">Offizieller Checkout (Waren & Dienstleistungen) anzeigen</p>
+                    <p className="text-[10px] text-text-secondary leading-tight mt-0.5">
+                      Wenn deaktiviert, ist die Option "Offizieller Checkout" für alle Besucher global unsichtbar. Es steht dann nur "Freunde & Familie" (0% Gebühren) zur Verfügung.
+                    </p>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={toggleOfficialCheckout}
+                    className={`w-12 h-6 rounded-full p-1 transition-all ${
+                      enableOfficialCheckout ? 'bg-[#0070BA]' : 'bg-slate-700'
+                    } relative shrink-0`}
+                  >
+                    <motion.div 
+                      initial={false}
+                      animate={{ x: enableOfficialCheckout ? 24 : 0 }}
+                      className="w-4 h-4 bg-white rounded-full shadow-sm"
+                    />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1 block mb-1">PayPal REST API Client ID</label>
+                    <input 
+                      type="text" 
+                      value={paypalClientId}
+                      onChange={(e) => setPaypalClientId(e.target.value)}
+                      placeholder="Live or Sandbox Client ID"
+                      className="w-full bg-input-bg border border-border-subtle focus:border-[#0070BA] rounded-xl px-4 py-3 text-white text-xs font-mono focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1 block mb-1">PayPal.me Username (Direktlink)</label>
+                    <div className="flex items-center bg-input-bg border border-border-subtle rounded-xl px-4 py-3">
+                      <span className="text-xs text-slate-500 font-mono">paypal.me/</span>
+                      <input 
+                        type="text" 
+                        value={paypalUsername}
+                        onChange={(e) => setPaypalUsername(e.target.value)}
+                        placeholder="deinname"
+                        className="w-full bg-transparent border-none text-white text-xs font-mono focus:outline-none p-0 pl-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Website Settings Save Button */}
+              <div className="flex justify-start">
+                <button
+                  onClick={handleSaveWebsiteSettings}
+                  disabled={savingWebSettings}
+                  className={`flex items-center gap-2 px-8 py-4 font-black uppercase tracking-widest text-xs rounded-2xl transition-all active:scale-95 disabled:opacity-50 shadow-2xl relative overflow-hidden group ${
+                    webSettingsSaved 
+                      ? 'bg-emerald-500 text-white' 
+                      : savingWebSettings 
+                        ? 'bg-slate-800 text-slate-400' 
+                        : 'bg-accent text-white hover:bg-accent/80'
+                  }`}
+                >
+                  <div className="relative z-10 flex items-center gap-2">
+                    {webSettingsSaved ? (
+                      <CheckCircle className="w-4 h-4" />
+                    ) : savingWebSettings ? (
+                      <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent animate-spin rounded-full" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
+                    <span>{webSettingsSaved ? 'Echtzeit-Synchronisiert!' : 'Website Einstellungen Live Speichern'}</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Bottom Save Action for non-website tabs */}
+          {activeTab !== 'website' && (
+            <div className="flex justify-start">
               <button
                 onClick={handleUpdateProfile}
                 disabled={isSaving}
@@ -279,6 +568,7 @@ export function SettingsView() {
                 </div>
               </button>
             </div>
+          )}
           </motion.div>
       </AnimatePresence>
 

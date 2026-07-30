@@ -253,10 +253,10 @@ export function AIAssistantView() {
 
         <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
           {sessions.map((session) => (
-            <button
+            <div
               key={session.id}
               onClick={() => handleSelectSession(session.id)}
-              className={`w-full text-left p-3 rounded-xl transition-all group relative flex items-center gap-3 border ${
+              className={`w-full text-left p-3 rounded-xl transition-all group relative flex items-center gap-3 border cursor-pointer ${
                 currentSessionId === session.id 
                   ? 'bg-accent/10 border-accent/30 text-text-primary' 
                   : 'bg-transparent border-transparent text-text-secondary hover:bg-input-bg hover:border-border-subtle'
@@ -265,12 +265,13 @@ export function AIAssistantView() {
               <MessageSquare className={`w-4 h-4 shrink-0 ${currentSessionId === session.id ? 'text-accent' : 'text-slate-500'}`} />
               <span className="text-xs font-bold truncate pr-6">{session.title}</span>
               <button
+                type="button"
                 onClick={(e) => handleDeleteSession(session.id, e)}
                 className="absolute right-3 opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-red-500 transition-all"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
-            </button>
+            </div>
           ))}
           {sessions.length === 0 && (
             <div className="text-center py-8 opacity-30">

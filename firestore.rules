@@ -218,5 +218,10 @@ service cloud.firestore {
       allow read, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if isSignedIn() && isValidChatMessage(request.resource.data);
     }
+
+    match /app_settings/{configId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isOwnerRole() || isAdmin();
+    }
   }
 }
