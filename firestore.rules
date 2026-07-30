@@ -223,5 +223,17 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create, update, delete: if isOwnerRole() || isAdmin();
     }
+
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn();
+      allow delete: if isOwnerRole();
+    }
+
+    match /active_sessions/{sessionId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
   }
 }

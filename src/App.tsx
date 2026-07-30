@@ -228,7 +228,12 @@ function SidebarContent({ activeTab, setActiveTab, navConfig }: { activeTab: str
   const menuItems = [
     { id: 'custom', label: 'Dashboard', icon: LayoutGrid },
     { id: 'paypal', label: 'PayPal Checkout', icon: CreditCard },
+    { id: 'budget', label: 'Finanzen & Budget', icon: Wallet },
+    { id: 'stocks', label: 'Aktien & Crypto', icon: TrendingUp },
+    { id: 'news', label: 'News Feed', icon: Newspaper },
     { id: 'ai', label: 'AI Assistent', icon: Sparkles, permission: 'ai.use' },
+    { id: 'chat', label: 'Live Team Chat', icon: MessageSquare },
+    { id: 'warframe', label: 'Warframe Hub', icon: Shield },
     { id: 'kanban', label: 'Kanban', icon: Columns, adminOnly: true },
     { id: 'documents', label: 'Dokumente', icon: FileBox },
     { id: 'notifications', label: 'Alerts', icon: Bell },
@@ -455,7 +460,12 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
           >
             {activeTab === 'custom' && <CustomDashboard />}
             {activeTab === 'paypal' && <PayPalPaymentView />}
+            {activeTab === 'budget' && <BudgetTrackerView />}
+            {activeTab === 'stocks' && <StocksView />}
+            {activeTab === 'news' && <NewsView />}
             {activeTab === 'ai' && <AIAssistantView />}
+            {activeTab === 'chat' && <PresenceChatView />}
+            {activeTab === 'warframe' && <WarframeView />}
             {activeTab === 'kanban' && <KanbanView />}
             {activeTab === 'documents' && <DocumentsView />}
             {activeTab === 'notifications' && <NotificationsView />}

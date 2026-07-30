@@ -28,7 +28,11 @@ import {
   Code,
   BarChart3,
   Terminal,
-  Users
+  Users,
+  Wallet,
+  TrendingUp,
+  Newspaper,
+  MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../lib/AuthContext';
@@ -43,7 +47,12 @@ interface SystemUser {
 
 const CONFIGURABLE_TABS = [
   { id: 'paypal', name: 'PayPal Checkout', desc: 'PayPal Zahlungen, QR-Code & Überweisungen', icon: CreditCard },
+  { id: 'budget', name: 'Finanzen & Budget', desc: 'Ausgaben- & Budget-Tracking mit Charts', icon: Wallet },
+  { id: 'stocks', name: 'Aktien & Crypto', desc: 'Echtzeit Kurse & Portfolio Watchlist', icon: TrendingUp },
+  { id: 'news', name: 'News Feed', desc: 'RSS-Feeds & AI Schlagzeilen-Zusammenfassungen', icon: Newspaper },
   { id: 'ai', name: 'AI Assistent', desc: 'Künstliche Intelligenz Chat & Assistent', icon: Sparkles },
+  { id: 'chat', name: 'Live Team Chat', desc: 'Echtzeit Chat & Raum-Kommunikation', icon: MessageSquare },
+  { id: 'warframe', name: 'Warframe Hub', desc: 'Game-Nexus Tracker, Alerts & Item Database', icon: Shield },
   { id: 'kanban', name: 'Kanban Board', desc: 'Aufgaben- & Projekt-Board', icon: Columns },
   { id: 'documents', name: 'Dokumente', desc: 'Dateiverwaltung & Dokumenten-Archiv', icon: FileBox },
   { id: 'notifications', name: 'Alerts', desc: 'System-Benachrichtigungen & Warnungen', icon: Bell },
@@ -53,6 +62,8 @@ const CONFIGURABLE_TABS = [
   { id: 'logs', name: 'System Logs', desc: 'System-Protokolle & Terminal Logs', icon: Terminal },
   { id: 'users', name: 'Team-Verwaltung', desc: 'Benutzer- & Rechteverwaltung', icon: Users },
 ];
+
+import { logAuditEvent } from '../lib/auditLogger';
 
 export function SettingsView() {
   const { profile, effectiveRole } = useAuth();
@@ -157,6 +168,14 @@ export function SettingsView() {
         updatedBy: profile?.email || 'owner'
       }, { merge: true });
 
+      await logAuditEvent(
+        'EINSTELLUNGEN_GESPEICHERT',
+        'settings',
+        `Website-Konfiguration und PayPal Client-ID aktualisiert (${paypalClientId.substring(0, 8)}...)`,
+        null,
+        { disabledTabs, paypalClientId: paypalClientId.substring(0, 8) + '...', paypalUsername, enableOfficialCheckout }
+      );
+
       setWebSettingsSaved(true);
       setTimeout(() => setWebSettingsSaved(false), 2000);
     } catch (err) {
@@ -168,9 +187,10 @@ export function SettingsView() {
   };
 
   const toggleTabState = async (tabId: string) => {
+    const isNowDisabled = !disabledTabs[tabId];
     const updated = {
       ...disabledTabs,
-      [tabId]: !disabledTabs[tabId]
+      [tabId]: isNowDisabled
     };
     setDisabledTabs(updated);
 
@@ -181,6 +201,15 @@ export function SettingsView() {
           updatedAt: Date.now(),
           updatedBy: profile?.email || 'owner'
         }, { merge: true });
+
+        await logAuditEvent(
+          'REITER_STATUS_GEÄNDERT',
+          'settings',
+          `Reiter '${tabId}' wurde ${isNowDisabled ? 'DEAKTIVIERT' : 'AKTIVIERT'}`,
+          { tabId, status: disabledTabs[tabId] ? 'enabled' : 'disabled' },
+          { tabId, status: isNowDisabled ? 'disabled' : 'enabled' }
+        );
+
         setWebSettingsSaved(true);
         setTimeout(() => setWebSettingsSaved(false), 1500);
       } catch (err) {
@@ -203,6 +232,15 @@ export function SettingsView() {
           updatedAt: Date.now(),
           updatedBy: profile?.email || 'owner'
         }, { merge: true });
+
+        await logAuditEvent(
+          'PAYPAL_CHECKOUT_MODUS_GEÄNDERT',
+          'paypal',
+          `Offizieller PayPal-Checkout wurde ${nextVal ? 'AKTIVIERT' : 'DEAKTIVIERT'}`,
+          { enableOfficialCheckout: !nextVal },
+          { enableOfficialCheckout: nextVal }
+        );
+
         setWebSettingsSaved(true);
         setTimeout(() => setWebSettingsSaved(false), 1500);
       } catch (err) {

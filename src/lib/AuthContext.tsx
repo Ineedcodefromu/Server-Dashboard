@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User as FirebaseUser, onAuthStateChanged } from 'firebase/auth';
+import { User as FirebaseUser, onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, getDocFromServer, updateDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { handleFirestoreError, OperationType } from './firestoreErrorHandler';
@@ -88,7 +88,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let unsubscribeProfile: (() => void) | null = null;
+    let unsubSession: (() => void) | null = null;
     let heartbeat: any;
+    let sessionHeartbeat: any;
+
+    // Retrieve or generate unique session ID for this browser tab/window
+    let currentSessionId = sessionStorage.getItem('app_session_id');
+    if (!currentSessionId) {
+      currentSessionId = 'sess_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
+      sessionStorage.setItem('app_session_id', currentSessionId);
+    }
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (authUser) => {
       setUser(authUser);
@@ -98,12 +107,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         unsubscribeProfile = null;
       }
 
+      if (unsubSession) {
+        unsubSession();
+        unsubSession = null;
+      }
+
       if (heartbeat) {
         clearInterval(heartbeat);
       }
 
+      if (sessionHeartbeat) {
+        clearInterval(sessionHeartbeat);
+      }
+
       if (authUser) {
         const userRef = doc(db, 'users', authUser.uid);
+        const sessionRef = doc(db, 'active_sessions', currentSessionId);
         
         // Presence heartbeat
         const updatePresence = async () => {
@@ -115,8 +134,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
         updatePresence();
         heartbeat = setInterval(updatePresence, 30000); // every 30s
+
+        // Active Session heartbeat & registering
+        const updateActiveSession = async () => {
+          try {
+            await setDoc(sessionRef, {
+              id: currentSessionId,
+              userId: authUser.uid,
+              email: authUser.email || 'Unbekannt',
+              displayName: authUser.displayName || authUser.email?.split('@')[0] || 'Nutzer',
+              userAgent: navigator.userAgent,
+              platform: navigator.platform || 'Browser',
+              lastActive: Date.now(),
+              status: 'online',
+              revoked: false
+            }, { merge: true });
+          } catch (e) {
+            console.warn("Session tracking error:", e);
+          }
+        };
+        updateActiveSession();
+        sessionHeartbeat = setInterval(updateActiveSession, 20000); // every 20s
+
+        // Real-time listener for session revocation by Admin/Owner
+        unsubSession = onSnapshot(sessionRef, (snap) => {
+          if (snap.exists() && snap.data().revoked === true) {
+            alert("Deine Sitzung wurde aus Sicherheitsgründen aus der Owner-Konsole heraus beendet.");
+            signOut(auth);
+          }
+        });
         
-        // Setup Real-time listener
+        // Setup Real-time listener for profile
         unsubscribeProfile = onSnapshot(userRef, (snapshot) => {
           if (snapshot.exists()) {
             setProfile(snapshot.data() as UserProfile);
@@ -171,7 +219,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       unsubscribeAuth();
       if (unsubscribeProfile) unsubscribeProfile();
+      if (unsubSession) unsubSession();
       if (heartbeat) clearInterval(heartbeat);
+      if (sessionHeartbeat) clearInterval(sessionHeartbeat);
     };
   }, []);
 

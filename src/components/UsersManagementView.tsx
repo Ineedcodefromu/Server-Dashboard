@@ -14,6 +14,7 @@ import {
 import { db, auth } from '../lib/firebase';
 import { useAuth } from '../lib/AuthContext';
 import { handleFirestoreError, OperationType } from '../lib/firestoreErrorHandler';
+import { logAuditEvent } from '../lib/auditLogger';
 
 interface UserProfile {
   uid: string;
@@ -134,7 +135,15 @@ export function UsersManagementView() {
 
     const userRef = doc(db, 'users', uid);
     try {
+      const targetUser = users.find(u => u.uid === uid);
       await updateDoc(userRef, { role: newRole });
+      await logAuditEvent(
+        'BENUTZER_ROLLE_GEÄNDERT',
+        'users',
+        `Rolle von ${targetUser?.email || uid} wurde zu '${newRole.toUpperCase()}' geändert`,
+        { role: targetUser?.role },
+        { role: newRole }
+      );
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
     }
@@ -143,7 +152,16 @@ export function UsersManagementView() {
   const handleUpdateUserGroup = async (uid: string, groupId: string) => {
     const userRef = doc(db, 'users', uid);
     try {
+      const targetUser = users.find(u => u.uid === uid);
+      const targetGroup = groups.find(g => g.id === groupId);
       await updateDoc(userRef, { groupId: groupId || null });
+      await logAuditEvent(
+        'BENUTZER_GRUPPE_GEÄNDERT',
+        'users',
+        `Benutzer ${targetUser?.email || uid} wurde der Gruppe '${targetGroup?.name || 'Keine'}' zugewiesen`,
+        { groupId: targetUser?.groupId },
+        { groupId }
+      );
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
     }
