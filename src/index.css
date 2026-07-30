@@ -1,24 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 :root {
-  --accent-rgb: 59, 130, 246;
-  --brand-bg: #ffffff;
-  --card-bg: #ffffff;
-  --card-bg-hover: #f8fafc;
-  --border-subtle: #e2e8f0;
-  --text-primary: #0f172a;
-  --text-secondary: #64748b;
-  --input-bg: #f1f5f9;
+  --accent-rgb: 10, 122, 155; /* Set specific premium cyan-blue tone */
+  --brand-bg: #03060a;
+  --card-bg: rgba(6, 11, 16, 0.7);
+  --card-bg-hover: rgba(10, 20, 30, 0.85);
+  --border-subtle: rgba(10, 122, 155, 0.2);
+  --text-primary: #cbd5e1;
+  --text-secondary: #94a3b8;
+  --input-bg: rgba(10, 122, 155, 0.05);
 }
 
 .dark {
-  --brand-bg: #050508;
-  --card-bg: rgba(17, 17, 26, 0.6);
-  --card-bg-hover: rgba(30, 30, 40, 0.8);
-  --border-subtle: rgba(255, 255, 255, 0.05);
+  --brand-bg: #03060a;
+  --card-bg: rgba(6, 11, 16, 0.7);
+  --card-bg-hover: rgba(10, 20, 30, 0.85);
+  --border-subtle: rgba(10, 122, 155, 0.2);
   --text-primary: #cbd5e1;
   --text-secondary: #94a3b8;
-  --input-bg: rgba(255, 255, 255, 0.02);
+  --input-bg: rgba(10, 122, 155, 0.05);
 }
 
 @theme {
@@ -31,6 +32,7 @@
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
   --color-input-bg: var(--input-bg);
+  --font-display: "Orbitron", "Space Grotesk", sans-serif;
 }
 
 @layer base {

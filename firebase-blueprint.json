@@ -22,6 +22,36 @@
             "email": { "type": "boolean" }
           }
         },
+        "warframe": {
+          "type": "object",
+          "properties": {
+            "meisterschaftsRang": { "type": "number" },
+            "stunden": { "type": "number" },
+            "clan": { "type": "string" },
+            "syndicates": {
+              "type": "object",
+              "properties": {
+                "steelMeridian": { "type": "number" },
+                "arbitersOfHexis": { "type": "number" },
+                "cephalonSuda": { "type": "number" }
+              }
+            },
+            "foundry": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string" },
+                  "title": { "type": "string" },
+                  "type": { "type": "string" },
+                  "craftTimeSeconds": { "type": "number" },
+                  "startedAt": { "type": "number" },
+                  "claimed": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email", "role"]

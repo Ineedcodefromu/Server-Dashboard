@@ -10,7 +10,7 @@ import {
   BarChart3, Code, FileText, Settings, LayoutDashboard, 
   TrendingUp, Newspaper, Briefcase, LogOut, Menu, X, Users, BarChart2,
   Terminal, User as UserIcon, Shield, ShieldAlert, ChevronRight, Columns, Sparkles,
-  Bell, FileBox, MessageSquare, Wallet, LayoutGrid
+  Bell, FileBox, MessageSquare, Wallet, LayoutGrid, CreditCard
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import { auth, db } from './lib/firebase';
@@ -33,6 +33,9 @@ import { SettingsView } from './components/SettingsView';
 import { PerformanceView } from './components/PerformanceView';
 import { LogsView } from './components/LogsView';
 import { UsersManagementView } from './components/UsersManagementView';
+import { WarframeView } from './components/WarframeView';
+import { WarframeIcon } from './components/WarframeIcon';
+import { PayPalPaymentView } from './components/PayPalPaymentView';
 import axios from 'axios';
 
 // --- Components ---
@@ -214,10 +217,8 @@ function SidebarContent({ activeTab, setActiveTab }: { activeTab: string, setAct
   const { profile, permissions, effectiveRole } = useAuth();
   
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'custom', label: 'Mein Space', icon: LayoutGrid },
-    { id: 'chat', label: 'Team Chat', icon: MessageSquare },
-    { id: 'budget', label: 'Finanzen', icon: Wallet, permission: 'budget.view' },
+    { id: 'custom', label: 'Dashboard', icon: LayoutGrid },
+    { id: 'paypal', label: 'PayPal Checkout', icon: CreditCard },
     { id: 'ai', label: 'AI Assistent', icon: Sparkles, permission: 'ai.use' },
     { id: 'kanban', label: 'Kanban', icon: Columns, adminOnly: true },
     { id: 'documents', label: 'Dokumente', icon: FileBox },
@@ -225,9 +226,6 @@ function SidebarContent({ activeTab, setActiveTab }: { activeTab: string, setAct
     { id: 'projects', label: 'Projekte', icon: Briefcase, permission: 'projects.view' },
     { id: 'code', label: 'Code', icon: Code, permission: 'code.view' },
     { id: 'performance', label: 'Leistung', icon: BarChart3, permission: 'dashboard.view' },
-    { id: 'stocks', label: 'Aktien', icon: TrendingUp, permission: 'dashboard.view' },
-    { id: 'derivatives', label: 'Derivate', icon: BarChart2, permission: 'dashboard.view' },
-    { id: 'news', label: 'News', icon: Newspaper, permission: 'dashboard.view' },
     { id: 'logs', label: 'Logs', icon: Terminal, permission: 'logs.view' },
     { id: 'users', label: 'Team', icon: Users, adminOnly: true },
     { id: 'settings', label: 'Einstellungen', icon: Settings, adminOnly: true },
@@ -420,10 +418,8 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.3 }}
           >
-            {activeTab === 'dashboard' && <DashboardOverview />}
             {activeTab === 'custom' && <CustomDashboard />}
-            {activeTab === 'chat' && <PresenceChatView />}
-            {activeTab === 'budget' && <BudgetTrackerView />}
+            {activeTab === 'paypal' && <PayPalPaymentView />}
             {activeTab === 'ai' && <AIAssistantView />}
             {activeTab === 'kanban' && <KanbanView />}
             {activeTab === 'documents' && <DocumentsView />}
@@ -431,9 +427,6 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
             {activeTab === 'projects' && <ProjectsView />}
             {activeTab === 'code' && <CodeView />}
             {activeTab === 'performance' && <PerformanceView />}
-            {activeTab === 'stocks' && <StocksView />}
-            {activeTab === 'derivatives' && <DerivativesComparisonView />}
-            {activeTab === 'news' && <NewsView />}
             {activeTab === 'logs' && <LogsView />}
             {activeTab === 'users' && <UsersManagementView />}
             {activeTab === 'settings' && <SettingsView />}
@@ -459,7 +452,7 @@ function AuthenticatedLayout({ activeTab, setActiveTab }: { activeTab: string, s
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('custom');
   
   return (
     <AuthProvider>

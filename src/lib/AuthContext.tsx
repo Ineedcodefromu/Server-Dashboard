@@ -23,6 +23,17 @@ interface UserProfile {
   newsFeeds?: { name: string; url: string }[];
   lastActive?: any;
   dashboardLayout?: string[];
+  warframe?: {
+    meisterschaftsRang: number;
+    stunden: number;
+    clan: string;
+    syndicates: {
+      steelMeridian: number;
+      arbitersOfHexis: number;
+      cephalonSuda: number;
+    };
+    foundry: any[];
+  };
 }
 
 interface AuthContextType {

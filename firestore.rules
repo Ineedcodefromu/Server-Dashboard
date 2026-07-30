@@ -135,7 +135,7 @@ service cloud.firestore {
       allow list: if hasPermission('users.manage');
       allow create: if isSignedIn() && isOwner(userId) && isValidUser(request.resource.data);
       allow update: if isSignedIn() && (
-        (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'watchlist', 'newsFeeds', 'theme', 'accentColor', 'notifications', 'lastActive', 'dashboardLayout', 'groupId', 'permissions'])) ||
+        (isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'watchlist', 'newsFeeds', 'theme', 'accentColor', 'notifications', 'lastActive', 'dashboardLayout', 'groupId', 'permissions', 'warframe'])) ||
         (isOwnerRole()) || // Super owner can update anyone
         (hasPermission('users.manage') && resource.data.get('role', 'user') != 'owner' && request.resource.data.get('role', 'user') != 'owner' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'groupId', 'permissions']))
       );
